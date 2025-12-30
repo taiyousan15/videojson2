@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-12-30T00:00:00Z",
+  "video": {
+    "source_type": "youtube",
+    "source": "https://youtu.be/TLWgnnzAIbs",
+    "title": "サンプル動画",
+    "channel": "Sample Channel",
+    "duration_ms": 60000,
+    "language": "ja"
+  },
+  "entities": {
+    "speakers": [
+      {
+        "id": "host",
+        "label": "話者（ホスト）",
+        "role": "presenter"
+      }
+    ]
+  },
+  "segments": [
+    {
+      "id": "s01",
+      "start_ms": 0,
+      "end_ms": 8000,
+      "type": "intro",
+      "speaker_id": "host",
+      "summary": "導入：テーマ提示",
+      "on_screen_text": [
+        {
+          "text": "AIシステム開発の未来",
+          "start_ms": 1000,
+          "end_ms": 7000,
+          "position_hint": "center"
+        }
+      ],
+      "visual_hints": [
+        "トーキングヘッド",
+        "タイトルテロップ"
+      ],
+      "confidence": 0.85
+    },
+    {
+      "id": "s02",
+      "start_ms": 8000,
+      "end_ms": 60000,
+      "type": "talk",
+      "speaker_id": "host",
+      "summary": "本題：3つのポイントを解説",
+      "key_points": [
+        "自動化が進む",
+        "AIエージェントの普及",
+        "検証と安全性が重要"
+      ],
+      "visual_hints": [
+        "箇条書きテロップ",
+        "関連B-roll"
+      ],
+      "confidence": 0.8
+    }
+  ]
+}

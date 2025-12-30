@@ -1,229 +1,100 @@
-# 仕様書（UI / API / DB）
+# 仕様書（VideoJSON）
 
-ここがあなたの要望「Next.js 15 + Prisma + Cloud Tasksでどう実装するか」の中核です。
+この文書は「どう作るか（設計の約束）」です。
+requirements.md の内容を前提に、実装が迷わないように整理します。
 
----
+## 1. 全体アーキテクチャ（ざっくり）
+- Web（Next.js）: 画面、API（管理、編集、ジョブ作成）
+- Worker（バックグラウンド）: 重い処理（解析、生成、レンダリング）
+- DB（PostgreSQL + Prisma）: プロジェクト、ジョブ、アセット、生成物の管理
+- Storage（GCS等）: 動画/音声/画像/JSON/ログなど
 
-## 3.1 実装アーキテクチャ（2サービス推奨）
+ポイント:
+- 「時間がかかる処理」はジョブとしてWorkerに投げる
+- ジョブの結果は "ファイル（JSON/動画）" として保存し、いつでも再利用できる
 
-### web（Next.js 15 / Cloud Run）
-- UI
-- 軽量API（DB、署名URL、Cloud Tasks enqueue）
+## 2. ジョブ種別（前提）
+- INGEST: 動画の取り込み・正規化
+- ANALYZE: 構造解析（チャプター/イベント抽出 → structure.json）
+- OCR: 画面内テキスト抽出
+- EMBED: 人物の紐付け（可能な範囲）
+- HIGHLIGHT: ハイライト抽出
+- GENERATE: 台本/画像/動画など生成
+- COMFYUI: ComfyUIワークフロー実行（任意）
+- RENDER: render.json に基づくレンダリング（FFmpeg等）
+- ASSEMBLE: 最終動画の組み立て
 
-### worker（Cloud Run / GKE / VM）
-- ingest/ffmpeg、解析、OCR、embedding、render、assemble、train
-- `POST /tasks/execute` を提供（Cloud Tasksから実行）
+## 3. データ契約（最重要）
+このプロジェクトの品質は「JSONの契約」を守れるかで決まります。
 
----
+### 3.1 structure.json（Event JSON）
+- 目的: 元動画の"流れ"をセグメントに分けて表現する
+- 検証: schemas/structure.schema.json
+- 最小運用: examples/minimal/structure.json を常に最新に保つ
 
-## 3.2 Cloud Tasks 実装の要点
+### 3.2 narration.md
+- 目的: セグメントIDに対応した台本
+- ルール: 見出し（## s01 など）でセグメントIDを一致させる
+- 台本は必ず書き換える（コピー禁止）
 
-| 項目 | 説明 |
-|------|------|
-| キュー分離 | `cpu-queue` / `gpu-queue` を分ける（詰まり防止） |
-| 認証 | OIDCトークン（推奨）＋ Cloud Tasksヘッダ検証 |
+### 3.3 render.json（自動編集用JSON）
+- 目的: 最終動画を作るための設計図
+- 検証: schemas/render.schema.json
+- render_mode:
+  - remix: 元動画の映像を主に使う
+  - generative: 生成映像を主に使う
+  - hybrid: 混在
 
-### 冪等性
-- **taskName** = `jobs/{jobId}` 固定（重複enqueue抑制）
-- **worker側**も `Job.status=SUCCEEDED` なら即return
+## 4. ストレージ設計（例）
+- projects/{projectId}/source/original.mp4
+- projects/{projectId}/analysis/structure.json
+- projects/{projectId}/authoring/narration.md
+- projects/{projectId}/render/render.json
+- projects/{projectId}/output/final.mp4
+- projects/{projectId}/assets/{assetId}/...
 
----
+重要:
+- "同じ入力→同じ出力" になるように、生成時のパラメータ（モデル名など）も記録する
 
-## 3.3 ジョブ種別ごとの状態遷移図
+## 5. UI（ユーザー操作フローの想定）
+1) プロジェクト作成
+2) 元動画を登録（YouTubeリンク or アップロード）
+3) 解析（structure.jsonを生成）
+4) 台本作成（narration.mdを生成→編集）
+5) 画像・音声をアップロード（本人素材）
+6) render.json生成（自動編集設計図）
+7) レンダリング→最終動画生成
+8) 差分修正（台本や一部セグメントだけ直して再生成）
 
-### 共通Status
+「台本はどこに入力する？」への答え:
+- UI上: 台本編集画面（Script Editor）を用意する
+- ファイル: projects/{projectId}/authoring/narration.md を編集して反映する
 
-```
-PENDING → QUEUED → RUNNING → (WAITING_EXTERNAL / REVIEW_REQUIRED) → SUCCEEDED|FAILED|CANCELED
-```
+「人物の画像/音声はどう渡す？」への答え:
+- 画像: assetsとしてアップロード（顔画像IDを render.json の lipsync 設定へ紐付け）
+- 音声: assetsとしてアップロード（本人の声として利用。第三者の声は禁止）
 
----
+## 6. 検証（validateの機械化）
+- schemas/structure.schema.json / schemas/render.schema.json を用意する
+- scripts/validate-json.mjs で構造を検証する
+- examples/ に最小サンプルを置き、CIで必ずチェックする
+- schema_version 更新時は docs/migrations.md に移行手順を書く
 
-### INGEST
+## 7. 権利・安全の実装要件（必須）
+- 音声/顔画像アセットには「本人の許諾がある」前提の注意書きをUIにも持つ
+- "コピーにならない" ため、台本生成では元動画の文言を復元しない設計にする
+- ログに個人情報や機密データを不用意に出さない
 
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> QUEUED: enqueue()
-  QUEUED --> RUNNING: taskStart
-  RUNNING --> SUCCEEDED: normalized.mp4 + sha256 + ingest.json
-  RUNNING --> FAILED: ffmpeg/error
-  RUNNING --> CANCELED: cancel
-  FAILED --> QUEUED: retry (retryable)
-```
-
----
-
-### ANALYZE（粗→詳細）
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> QUEUED
-  QUEUED --> RUNNING
-  RUNNING --> WAITING_EXTERNAL: upload/index
-  WAITING_EXTERNAL --> RUNNING: indexed_asset ready
-  RUNNING --> RUNNING: stageA coarse chapters/events
-  RUNNING --> RUNNING: stageB per-segment detail
-  RUNNING --> REVIEW_REQUIRED: low confidence / schema issues
-  REVIEW_REQUIRED --> RUNNING: patch applied / instructions provided
-  RUNNING --> SUCCEEDED: event.json v1.1
-  RUNNING --> FAILED: provider error
-  FAILED --> QUEUED: retry (retryable)
-```
-
----
-
-### OCR（Style抽出：提案→承認）
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> QUEUED
-  QUEUED --> RUNNING
-  RUNNING --> REVIEW_REQUIRED: report + suggested_patch
-  REVIEW_REQUIRED --> SUCCEEDED: patch adopted OR dismissed
-  RUNNING --> FAILED
-  FAILED --> QUEUED: retry
-```
-
----
-
-### EMBED（人物同一性）
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> QUEUED
-  QUEUED --> RUNNING
-  RUNNING --> RUNNING: detect/track/embed/cluster
-  RUNNING --> REVIEW_REQUIRED: weak-band needs decision
-  REVIEW_REQUIRED --> RUNNING: decision received
-  RUNNING --> SUCCEEDED: linking_report + event.patch
-  RUNNING --> FAILED
-  FAILED --> QUEUED: retry
-```
+## 8. 成果物（最低限）
+- schemas/structure.schema.json
+- schemas/render.schema.json
+- examples/minimal/structure.json
+- examples/minimal/narration.md
+- examples/minimal/render.json
+- npm run schema:validate が通る
+- docs/workflow.html で全体の流れが一目で分かる
 
 ---
-
-### HIGHLIGHT
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> QUEUED
-  QUEUED --> RUNNING
-  RUNNING --> REVIEW_REQUIRED: review_required=true
-  RUNNING --> SUCCEEDED: highlight_plan.json (auto accepted)
-  REVIEW_REQUIRED --> SUCCEEDED: highlight_feedback saved
-  RUNNING --> FAILED
-  FAILED --> QUEUED: retry
-```
-
----
-
-### RENDER（Remix/Generative）
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> QUEUED
-  QUEUED --> RUNNING
-  RUNNING --> WAITING_EXTERNAL: ComfyUI queue (generative only)
-  WAITING_EXTERNAL --> RUNNING: execution start
-  RUNNING --> SUCCEEDED: clip manifests or draft mp4
-  RUNNING --> FAILED
-  FAILED --> QUEUED: retry
-```
-
----
-
-### ASSEMBLE
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> QUEUED
-  QUEUED --> RUNNING
-  RUNNING --> SUCCEEDED: final mp4 + subtitle + bgm
-  RUNNING --> FAILED
-  FAILED --> QUEUED: retry
-```
-
----
-
-### TRAIN
-
-```mermaid
-stateDiagram-v2
-  [*] --> PENDING
-  PENDING --> QUEUED
-  QUEUED --> RUNNING
-  RUNNING --> SUCCEEDED: weights new version
-  RUNNING --> FAILED
-  FAILED --> QUEUED: retry
-```
-
----
-
-## 3.4 画面ごとのUIコンポーネント責務（App Router前提）
-
-**原則**：PageはServer（認可・初期データ）／編集や監視はClient。
-
-### /projects
-| 種別 | コンポーネント |
-|------|----------------|
-| Server | projects取得、権限 |
-| Client | ProjectList, CreateProjectButton |
-
-### /projects/[projectId]/videos/new
-| 種別 | コンポーネント |
-|------|----------------|
-| Client | VideoSourceTypeTabs, UrlInputForm, GcsDirectUploadWidget, UploadProgressBar |
-
-### /projects/[projectId]/videos/[videoId]
-| 種別 | コンポーネント |
-|------|----------------|
-| Server | video/artifacts/jobs取得 |
-| Client | VideoPlayer, JobLauncherPanel, ArtifactsTimeline |
-
-### /analysis
-| 種別 | コンポーネント |
-|------|----------------|
-| Client | JobStatusBanner, EventTimelineView, EntityTable, OnScreenTextPanel, PatchEditor, ApproveButton |
-
-### /highlights
-| 種別 | コンポーネント |
-|------|----------------|
-| Client | HighlightCandidateList, SegmentPreviewPlayer, SelectionControls, FeedbackForm, SaveFeedbackButton |
-
-### /authoring
-| 種別 | コンポーネント |
-|------|----------------|
-| Client | AuthoringTabs, ScriptEditor, RolesEditor, AssetsManager, StyleEditor, JsonPatchDiffView, CreateOverrideRevisionButton |
-
-### /render
-| 種別 | コンポーネント |
-|------|----------------|
-| Client | ProfileSelector, RenderModeSelector, BgmPicker, ComfyTemplateSelector, RunRenderButton, JobStatusBanner |
-
-### /outputs
-| 種別 | コンポーネント |
-|------|----------------|
-| Client | OutputGallery, OutputPreviewModal, DownloadButton, DeriveNewVariantButton |
-
-### /runs
-| 種別 | コンポーネント |
-|------|----------------|
-| Client | RunList, RunCompare, RerunButton |
-
-### /admin/*
-| 種別 | コンポーネント |
-|------|----------------|
-| Client | ProviderSettings, EmbeddingThresholdSettings, TemplateManager, WeightsManager, JobMonitor |
-
----
-
-## 3.5 DB（Prisma）とAPI（Route Handlers）
-
-実装可能な Prisma schema骨格と、代表API（jobs/review/signed-url等）は別途詳細仕様を参照。
+更新ルール:
+- 実装を変える前に spec.md を更新する
+- spec.md を変えたら schema / examples / docs も整合させる

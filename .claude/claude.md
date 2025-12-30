@@ -1,54 +1,55 @@
-# 要件定義書（憲法）
+# VideoJSON / Claude Code ガイド（このリポジトリの最優先ルール）
 
-## 0. 位置づけ
+このファイルは、Claude Code がこのリポジトリで作業するときの「共通ルール」です。
+初心者の方でも迷わないように、専門用語はできるだけ避けて書いています。
 
-本書は "憲法"（不変の原則）です。
-以降のUI/API/DB/実装議論は **本書に矛盾してはいけません**。
+## 1. このリポジトリで作りたいもの（ゴール）
+元動画を「構造（流れ）」としてJSON化し、台本・音声・人物（見た目）を差し替えて、元の流れを参考にしつつ "中身は別物" の動画を作る仕組みを作ります。
+
+重要:
+- そのままのコピーにならないように、必ず台本は書き換える（オリジナル化）
+- 声・顔画像は、本人の許可があるものだけを使う（本人の声/本人の画像ならOK）
+
+## 2. まず読むべきドキュメント（優先順位）
+1) docs/requirements.md   … 何を実現するか（要件）
+2) docs/spec.md           … どう作るか（仕様）
+3) docs/implementation-plan.md … どう進めるか（計画）
+4) docs/migrations.md     … schema_version を上げるときの約束
+5) docs/claude-code-setup.md … Claude Codeでの操作フロー（自動読み込み含む）
+
+## 3. 生成物（このリポジトリが扱う"核"のデータ）
+- structure.json（＝Event JSON）: 元動画の流れを「区間（セグメント）」に分けた設計図
+- narration.md           : 台本（structureのセグメントIDに対応）
+- render.json            : 自動編集用の設計図（最終的にFFmpeg等へ渡す想定）
+
+これらは必ず schemas/structure.schema.json と schemas/render.schema.json で検証すること。
+
+## 4. Claude Code に求める動き（自動読み込み・自動判断）
+あなた（Claude Code）は、ユーザーの発言を見て、必要なら自発的に以下を実行してください。
+
+- 「structure.json」「Event JSON」「動画をJSON化」「YouTube解析」などが出たら
+  → .claude/skills/videojson_pipeline/SKILL.md を読んで手順に従う
+
+- 「structureから台本を作る」「narration.mdを生成」などが出たら
+  → .claude/skills/narration_generator/SKILL.md を読んで手順に従う
+
+- 「narration + structure から自動編集JSON」「render.jsonを作る」などが出たら
+  → .claude/skills/render_generator/SKILL.md を読んで手順に従う
+
+## 5. 作業ルール（失敗しないための最低限）
+- 変更の前に "どこをどう変えるか" を短く整理してから着手する
+- JSONを出力したら必ず npm run schema:validate を通す
+- examples/ が壊れる変更は、必ず examples/ も更新して直す
+- schema_version を変えたら docs/migrations.md も更新する
+- 迷ったら「初心者が理解できる言葉」に言い換える
+
+## 6. 著作権・肖像・声の取り扱い（必須）
+- 元動画の素材を使う場合は、利用許可・ライセンス・引用要件を確認する
+- 第三者の顔写真・声の模倣は、明確な許可がない限り実装・運用しない
+- "構成を参考にする" ことと "ほぼ同じものを複製する" の間には危険な境界があるため、
+  本システムは「中身（台本・表現）は必ず作り替える」前提で設計する
 
 ---
-
-## 1. Mission
-
-ユーザーが **動画URLまたはMP4ファイルを渡すだけ**で、
-
-1. 動画を **構造化（JSON化）**
-2. そのJSONを基に **Shorts/長編を再生成**
-3. さらに **差分編集（台本/人物像/画像/スタイル）**で効率的に修正・展開
-
-できる制作・運用システムを提供する。
-
----
-
-## 2. Agent × JSON × World Models（思想の固定）
-
-- **JSONは共通言語**：視覚情報をJSONへ変換して初めて、エージェントは推論しツールを操作できる。
-- **動画→Event JSON**は、世界モデル構築の **観測データ収集**。
-- **生成モデルはシミュレーター**：正解当てではなく、候補状態を提示して選定・学習で収束させる。
-
----
-
-## 3. Non‑Negotiables（絶対原則）
-
-| ID | 原則 |
-|----|------|
-| P1 | **PromptではなくState保存**：RunごとにState JSONを保存し再現性を担保 |
-| P2 | **観測（Event）と制作（Authoring）の分離** |
-| P3 | **差分運用（base + JSON Patch）** |
-| P4 | **Human‑in‑the‑loop標準化**（危険な自動適用禁止：style/人物統合など） |
-| P5 | **ハイブリッド動画理解**（ネイティブ動画 + LLM） |
-| P6 | **ジョブは非同期＋冪等**（Cloud Tasks） |
-| P7 | **Traceability必須**（Event→Authoring→Plan→Outputを辿れる） |
-| P8 | **権利/プライバシーガードレール**（削除・アクセス制御・Secret管理） |
-
----
-
-## 4. コア成果物（JSON）
-
-| 成果物 | 役割 |
-|--------|------|
-| **Event JSON** | 観測 |
-| **Authoring JSON** | 編集可能な制作 |
-| **Plan JSON** | 実行可能な計画 |
-| **Output mp4** | 最終出力 |
-| **State JSON** | 完全状態・監査 |
-| **Feedback/Weights** | 学習ループ |
+最後に:
+このリポジトリは、動画制作を高速化するための仕組みです。
+ただし「自動化」より先に「安全」と「権利」を守ること。
