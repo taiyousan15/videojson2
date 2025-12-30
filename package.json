@@ -19,6 +19,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "schema:validate": "node scripts/validate-examples.mjs",
+    "narration:validate": "node scripts/validate-narration.mjs",
+    "validate": "npm run schema:validate && node scripts/validate-narration.mjs --structure examples/minimal/structure.json --narration examples/minimal/narration.md",
     "render:generate": "node scripts/generate-render.mjs"
   },
   "dependencies": {

@@ -240,7 +240,22 @@
                   }
                 }
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": { "mode": { "const": "generate" } }
+                },
+                "then": {
+                  "properties": {
+                    "source": {
+                      "required": ["prompt"]
+                    }
+                  },
+                  "required": ["source"]
+                }
+              }
+            ]
           },
           "audio": {
             "type": "object",
@@ -279,7 +294,25 @@
                   }
                 }
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": { "mode": { "const": "tts" } }
+                },
+                "then": {
+                  "required": ["script"]
+                }
+              },
+              {
+                "if": {
+                  "properties": { "mode": { "const": "uploaded" } }
+                },
+                "then": {
+                  "required": ["asset_id"]
+                }
+              }
+            ]
           },
           "overlays": {
             "type": "object",

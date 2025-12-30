@@ -27,6 +27,10 @@
 ## 4. Claude Code に求める動き（自動読み込み・自動判断）
 あなた（Claude Code）は、ユーザーの発言を見て、必要なら自発的に以下を実行してください。
 
+**まず最初に**: ユーザーの意図が不明確なときは
+→ .claude/skills/videojson_orchestrator/SKILL.md を読んで、適切なスキルへ誘導する
+
+**具体的な作業**:
 - 「structure.json」「Event JSON」「動画をJSON化」「YouTube解析」などが出たら
   → .claude/skills/videojson_pipeline/SKILL.md を読んで手順に従う
 
