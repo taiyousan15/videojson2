@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local prisma copy (source is ../prisma)
+prisma/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log

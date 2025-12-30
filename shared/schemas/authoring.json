@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "authoring.json",
+  "title": "Authoring JSON Schema",
+  "type": "object",
+  "required": ["version", "videoId", "script", "roles"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "videoId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "baseEventJsonUri": {
+      "type": "string"
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/jsonPatchOperation"
+      }
+    },
+    "script": {
+      "$ref": "#/definitions/script"
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/role"
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/asset"
+      }
+    },
+    "style": {
+      "$ref": "#/definitions/style"
+    }
+  },
+  "definitions": {
+    "jsonPatchOperation": {
+      "type": "object",
+      "required": ["op", "path"],
+      "properties": {
+        "op": { "type": "string", "enum": ["add", "remove", "replace", "copy", "move", "test"] },
+        "path": { "type": "string" },
+        "value": {}
+      }
+    },
+    "script": {
+      "type": "object",
+      "properties": {
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "start", "end"],
+            "properties": {
+              "id": { "type": "string" },
+              "start": { "type": "number" },
+              "end": { "type": "number" },
+              "narration": { "type": "string" },
+              "subtitle": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "role": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "entityId": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "required": ["id", "type", "gcsUri"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["IMAGE", "AUDIO", "VIDEO"] },
+        "name": { "type": "string" },
+        "gcsUri": { "type": "string" }
+      }
+    },
+    "style": {
+      "type": "object",
+      "properties": {
+        "subtitle": {
+          "type": "object",
+          "properties": {
+            "fontFamily": { "type": "string" },
+            "fontSize": { "type": "number" },
+            "color": { "type": "string" },
+            "backgroundColor": { "type": "string" },
+            "position": { "type": "string", "enum": ["top", "center", "bottom"] }
+          }
+        },
+        "safeArea": {
+          "type": "object",
+          "properties": {
+            "top": { "type": "number" },
+            "bottom": { "type": "number" },
+            "left": { "type": "number" },
+            "right": { "type": "number" }
+          }
+        }
+      }
+    }
+  }
+}

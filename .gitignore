@@ -1,0 +1,86 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Next.js
+.next/
+out/
+
+# Build
+dist/
+build/
+
+# Testing
+coverage/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Prisma
+prisma/migrations/**/migration_lock.toml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Logs
+logs/
+*.log
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# MCP Config (contains local paths and API keys)
+.mcp.json
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Local context
+.context/
+
+# Accidentally created directories
+gs:/
+
+# Python virtual environments
+venv/
+venv_*/
+__pycache__/
+*.pyc
+
+# Work directories (generated content)
+videojson_workdir/
+
+# Large model files
+*.onnx
+*.pth
+*.pt
+
+# Screenshots and test artifacts
+tests/e2e/screenshots/
+
+# MCP servers local
+mcp-servers/

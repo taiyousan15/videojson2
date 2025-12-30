@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "state.json",
+  "title": "State JSON Schema",
+  "type": "object",
+  "required": ["version", "runId", "videoId", "createdAt", "artifacts"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "runId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "videoId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "config": {
+      "type": "object"
+    },
+    "artifacts": {
+      "type": "object",
+      "properties": {
+        "sourceVideo": { "type": "string" },
+        "normalizedVideo": { "type": "string" },
+        "eventJson": { "type": "string" },
+        "authoringJson": { "type": "string" },
+        "planJson": { "type": "string" },
+        "outputVideo": { "type": "string" }
+      }
+    },
+    "jobs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/jobSummary"
+      }
+    },
+    "providerVersions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "modelWeightsVersion": {
+      "type": "integer"
+    }
+  },
+  "definitions": {
+    "jobSummary": {
+      "type": "object",
+      "required": ["jobId", "type", "status"],
+      "properties": {
+        "jobId": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "plan.json",
+  "title": "Plan JSON Schema",
+  "type": "object",
+  "required": ["version", "videoId", "mode", "segments"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "videoId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "authoringJsonUri": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["REMIX", "GENERATIVE"]
+    },
+    "profile": {
+      "$ref": "#/definitions/profile"
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/segment"
+      }
+    },
+    "bgm": {
+      "$ref": "#/definitions/bgm"
+    },
+    "transitions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/transition"
+      }
+    }
+  },
+  "definitions": {
+    "profile": {
+      "type": "object",
+      "properties": {
+        "aspectRatio": { "type": "string", "enum": ["16:9", "9:16", "1:1"] },
+        "targetDuration": { "type": "number" },
+        "platform": { "type": "string", "enum": ["YOUTUBE", "YOUTUBE_SHORTS", "TIKTOK", "INSTAGRAM"] }
+      }
+    },
+    "segment": {
+      "type": "object",
+      "required": ["id", "sourceStart", "sourceEnd"],
+      "properties": {
+        "id": { "type": "string" },
+        "sourceStart": { "type": "number" },
+        "sourceEnd": { "type": "number" },
+        "outputStart": { "type": "number" },
+        "outputEnd": { "type": "number" },
+        "speed": { "type": "number", "default": 1.0 },
+        "reframe": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "width": { "type": "number" },
+            "height": { "type": "number" }
+          }
+        },
+        "subtitle": { "type": "string" },
+        "comfyWorkflow": { "type": "string" }
+      }
+    },
+    "bgm": {
+      "type": "object",
+      "properties": {
+        "assetId": { "type": "string" },
+        "gcsUri": { "type": "string" },
+        "volume": { "type": "number", "default": 0.3 },
+        "fadeIn": { "type": "number" },
+        "fadeOut": { "type": "number" }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "required": ["fromSegmentId", "toSegmentId", "type"],
+      "properties": {
+        "fromSegmentId": { "type": "string" },
+        "toSegmentId": { "type": "string" },
+        "type": { "type": "string", "enum": ["CUT", "FADE", "DISSOLVE", "WIPE"] },
+        "duration": { "type": "number" }
+      }
+    }
+  }
+}

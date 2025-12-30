@@ -1,0 +1,388 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Auth (NextAuth.js)
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  password      String?   // For credentials provider
+  role          Role      @default(CREATOR)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  memberships Membership[]
+  projects    ProjectMember[]
+  jobs        Job[]
+  feedbacks   HighlightFeedback[]
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  CREATOR
+}
+
+// ============================================
+// Workspace & Membership
+// ============================================
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members  Membership[]
+  projects Project[]
+}
+
+model Membership {
+  id          String   @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        Role     @default(CREATOR)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+// ============================================
+// Project & Video
+// ============================================
+
+model Project {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  domain      String?
+  language    String   @default("ja")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members   ProjectMember[]
+  videos    Video[]
+  webhooks  Webhook[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  role      Role     @default(CREATOR)
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Video {
+  id          String      @id @default(uuid())
+  projectId   String
+  title       String?
+  sourceType  SourceType
+  sourceUrl   String?
+  gcsUri      String?
+  sha256      String?
+  duration    Float?
+  width       Int?
+  height      Int?
+  fps         Float?
+  status      VideoStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  jobs      Job[]
+  artifacts Artifact[]
+  outputs   Output[]
+  runs      Run[]
+}
+
+enum SourceType {
+  URL
+  UPLOAD
+}
+
+enum VideoStatus {
+  PENDING
+  INGESTING
+  READY
+  FAILED
+}
+
+// ============================================
+// Job
+// ============================================
+
+model Job {
+  id          String    @id @default(uuid())
+  videoId     String
+  type        JobType
+  status      JobStatus @default(PENDING)
+  progress    Int       @default(0)
+  stage       String?
+  config      Json      @default("{}")
+  payload     Json?
+  result      Json?
+  error       String?
+  retryCount  Int       @default(0)
+  taskName    String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+
+  video     Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  createdBy User?      @relation(fields: [createdById], references: [id])
+  artifacts Artifact[]
+  reviews   JobReview[]
+}
+
+enum JobType {
+  INGEST
+  ANALYZE
+  OCR
+  EMBED
+  HIGHLIGHT
+  RENDER
+  ASSEMBLE
+  TRAIN
+  GENERATE
+  COMFYUI
+  FACE_SWAP
+}
+
+enum JobStatus {
+  PENDING
+  QUEUED
+  RUNNING
+  WAITING_EXTERNAL
+  REVIEW_REQUIRED
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+model JobReview {
+  id        String       @id @default(uuid())
+  jobId     String
+  action    ReviewAction
+  patch     Json?
+  comment   String?
+  createdAt DateTime     @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+enum ReviewAction {
+  APPROVE
+  REJECT
+  PATCH
+}
+
+// ============================================
+// Artifact
+// ============================================
+
+model Artifact {
+  id        String       @id @default(uuid())
+  jobId     String
+  videoId   String?      // Optional for system-level artifacts like training metrics
+  type      ArtifactType
+  gcsUri    String
+  metadata  Json         @default("{}")
+  createdAt DateTime     @default(now())
+
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  video Video? @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+enum ArtifactType {
+  SOURCE_VIDEO
+  NORMALIZED_VIDEO
+  EVENT_JSON
+  AUTHORING_JSON
+  PLAN_JSON
+  STATE_JSON
+  OUTPUT_VIDEO
+  THUMBNAIL
+  ASS_SUBTITLE
+  OCR_REPORT
+  EMBED_REPORT
+  HIGHLIGHT_PLAN
+  TEMPLATE_JSON
+  RENDER_SCRIPT
+  GENERATED_ASSETS
+  FACE_SWAPPED_VIDEO
+  TARGET_FACE
+  TRAINING_METRICS
+}
+
+// ============================================
+// Output & Run
+// ============================================
+
+model Output {
+  id          String   @id @default(uuid())
+  videoId     String
+  runId       String
+  name        String
+  gcsUri      String
+  duration    Float?
+  format      String   @default("mp4")
+  aspectRatio String?
+  createdAt   DateTime @default(now())
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  run   Run   @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model Run {
+  id           String   @id @default(uuid())
+  videoId      String
+  stateJsonUri String
+  config       Json     @default("{}")
+  createdAt    DateTime @default(now())
+
+  video   Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  outputs Output[]
+}
+
+// ============================================
+// Highlight & Feedback
+// ============================================
+
+model HighlightFeedback {
+  id          String   @id @default(uuid())
+  videoId     String
+  segmentId   String
+  rating      Int
+  comment     String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  createdBy User @relation(fields: [createdById], references: [id])
+}
+
+// ============================================
+// Model Weights
+// ============================================
+
+model ModelWeights {
+  id        String   @id @default(uuid())
+  name      String
+  version   Int      @default(1)
+  weights   Json
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([name, version])
+}
+
+// ============================================
+// Provider Config
+// ============================================
+
+model ProviderConfig {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  type      String
+  config    Json
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// Webhook
+// ============================================
+
+model Webhook {
+  id          String        @id @default(uuid())
+  projectId   String?
+  name        String
+  url         String
+  secret      String?
+  events      String[]      // ["job.completed", "job.failed", "video.ready"]
+  active      Boolean       @default(true)
+  headers     Json?         // Custom headers
+  retryCount  Int           @default(3)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  project     Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deliveries  WebhookDelivery[]
+}
+
+model WebhookDelivery {
+  id          String   @id @default(uuid())
+  webhookId   String
+  event       String
+  payload     Json
+  status      Int      // HTTP status code
+  response    String?  @db.Text
+  duration    Int?     // ms
+  attempts    Int      @default(1)
+  createdAt   DateTime @default(now())
+
+  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+}
