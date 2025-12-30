@@ -21,7 +21,14 @@
     "schema:validate": "node scripts/validate-examples.mjs",
     "narration:validate": "node scripts/validate-narration.mjs",
     "validate": "npm run schema:validate && node scripts/validate-narration.mjs --structure examples/minimal/structure.json --narration examples/minimal/narration.md",
-    "render:generate": "node scripts/generate-render.mjs"
+    "validate:semantic": "node scripts/validate-semantic.mjs",
+    "validate:policy": "node scripts/validate-policy.mjs",
+    "render:generate": "node scripts/generate-render.mjs",
+    "render:bootstrap": "node scripts/bootstrap-smoke-assets.mjs",
+    "render:materialize": "node scripts/materialize-render.mjs",
+    "render:ffmpeg": "node scripts/render-ffmpeg.mjs",
+    "render:smoke": "npm run render:bootstrap && npm run render:materialize -- --render examples/smoke/render.json && npm run render:ffmpeg -- --render examples/smoke/render.materialized.json",
+    "render:run": "node scripts/render-run.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

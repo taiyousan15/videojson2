@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-01-01T00:00:00.000Z",
+  "render_mode": "remix",
+  "output": {
+    "format": "mp4",
+    "width": 640,
+    "height": 360,
+    "fps": 30,
+    "audio_sample_rate": 44100,
+    "filename": "smoke_output.mp4"
+  },
+  "assets": [
+    {
+      "id": "placeholder_video",
+      "type": "video",
+      "uri": "assets/placeholder.mp4"
+    },
+    {
+      "id": "placeholder_audio",
+      "type": "audio",
+      "uri": "assets/placeholder.mp3"
+    },
+    {
+      "id": "placeholder_image",
+      "type": "image",
+      "uri": "assets/placeholder.png"
+    }
+  ],
+  "segments": [
+    {
+      "id": "s01",
+      "duration_ms": 3000,
+      "video": {
+        "mode": "reuse_original",
+        "source": {
+          "asset_id": "placeholder_video",
+          "in_ms": 0,
+          "out_ms": 3000
+        }
+      },
+      "audio": {
+        "mode": "uploaded",
+        "asset_id": "placeholder_audio"
+      }
+    },
+    {
+      "id": "s02",
+      "duration_ms": 3000,
+      "video": {
+        "mode": "static_image",
+        "source": {
+          "asset_id": "placeholder_image"
+        }
+      },
+      "audio": {
+        "mode": "uploaded",
+        "asset_id": "placeholder_audio"
+      }
+    }
+  ]
+}

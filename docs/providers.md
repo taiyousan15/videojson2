@@ -208,4 +208,85 @@ projects/{projectId}/workflows/
 
 ---
 
+## 8. CI/CD での設計方針
+
+### 外部 API を呼ばない設計
+
+**重要**: CI 環境では外部 API（TTS、Lipsync、動画生成など）を呼びません。
+
+```yaml
+# GitHub Actions での設定
+env:
+  VIDEOJSON_TTS_PROVIDER: dummy
+```
+
+### フォールバック動作
+
+| 状況 | 動作 |
+|------|------|
+| `VIDEOJSON_TTS_PROVIDER=dummy` | 無音音声を生成 |
+| API キー未設定 | 自動的に dummy にフォールバック |
+| API 呼び出し失敗 | エラーログ後に dummy にフォールバック |
+
+### 本番との切り替え
+
+```bash
+# CI（API呼び出しなし）
+VIDEOJSON_TTS_PROVIDER=dummy npm run render:smoke
+
+# 本番（実API呼び出し）
+VIDEOJSON_TTS_PROVIDER=elevenlabs npm run render:run ...
+```
+
+### 手動テスト手順（ローカルで ElevenLabs API を試す場合）
+
+1. `.env` に API キーを設定：
+   ```bash
+   ELEVENLABS_API_KEY=your_api_key
+   ELEVENLABS_VOICE_ID=your_voice_id  # オプション
+   ```
+
+2. TTS を使う render.json を用意（`audio.mode: "tts"` のセグメントを含む）
+
+3. 以下を実行：
+   ```bash
+   VIDEOJSON_TTS_PROVIDER=elevenlabs npm run render:materialize -- \
+     --render examples/smoke/render_tts.json
+   ```
+
+4. 生成された音声ファイルを確認：
+   ```bash
+   ls -la examples/smoke/.tmp/audio/
+   # または
+   afplay examples/smoke/.tmp/audio/s01_tts.mp3  # macOS
+   ```
+
+### ElevenLabs 設定オプション
+
+render.json の `providers.tts` で以下を設定可能：
+
+```json
+{
+  "providers": {
+    "tts": {
+      "provider": "elevenlabs",
+      "voice_id": "21m00Tcm4TlvDq8ikWAM",
+      "language": "ja",
+      "model": "eleven_multilingual_v2",
+      "stability": 0.5,
+      "similarity_boost": 0.75
+    }
+  }
+}
+```
+
+| 設定 | 説明 | デフォルト |
+|------|------|-----------|
+| `voice_id` | 音声ID | Rachel (21m00Tcm4TlvDq8ikWAM) |
+| `model` | モデル | eleven_multilingual_v2 |
+| `stability` | 安定性 (0-1) | 0.5 |
+| `similarity_boost` | 類似度 (0-1) | 0.75 |
+
+---
+
 次の実装では、このドキュメントを参照しながら Worker とプロバイダー接続を進めてください。
