@@ -66,7 +66,29 @@ VideoJSONでは、手順を以下に置きます:
 - 外部の機能は「このリポジトリにファイルを置いただけ」で自動インストールされるものではありません
 - 使う場合は、Claude Codeの /plugin install や CLI で "自分の環境" に入れます
 
-## 6) 画像/音声をどう渡す？
+## 6) render.json をコマンドで生成する
+
+structure.json と narration.md から render.json を自動生成できます。
+
+```bash
+node scripts/generate-render.mjs \
+  --structure examples/minimal/structure.json \
+  --narration examples/minimal/narration.md \
+  --out examples/minimal/render.cli.json
+```
+
+または npm script で:
+```bash
+npm run render:generate -- --structure <path> --narration <path> --out <path>
+```
+
+生成後、自動的に schema validate が実行されます。
+
+### よくある失敗と直し方
+- **セグメントID不一致**: narration.md の見出し（## s01）が structure.json の segments[].id と一致しているか確認
+- **台本が空**: narration.md の各セグメントに本文があるか確認（[話者: ...] 行だけでは不可）
+
+## 7) 画像/音声をどう渡す？
 - 画像: assets としてアップロード → asset_id を render.json の lipsync 設定へ
 - 音声: assets としてアップロード → 本人の声として利用（第三者の声は禁止）
 
