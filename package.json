@@ -20,6 +20,8 @@
     "test:e2e:ui": "playwright test --ui",
     "schema:validate": "node scripts/validate-examples.mjs",
     "narration:validate": "node scripts/validate-narration.mjs",
+    "narration:skeleton": "node scripts/generate-narration-skeleton.mjs",
+    "narration:generate": "node scripts/generate-narration.mjs",
     "validate": "npm run schema:validate && node scripts/validate-narration.mjs --structure examples/minimal/structure.json --narration examples/minimal/narration.md",
     "validate:semantic": "node scripts/validate-semantic.mjs",
     "validate:policy": "node scripts/validate-policy.mjs",
@@ -30,7 +32,9 @@
     "render:smoke": "npm run render:bootstrap && npm run render:materialize -- --render examples/smoke/render.json && npm run render:ffmpeg -- --render examples/smoke/render.materialized.json",
     "render:run": "node scripts/render-run.mjs",
     "analyze:transcript": "node scripts/analyze-transcript.mjs",
-    "analyze:youtube": "node scripts/analyze-youtube.mjs"
+    "analyze:youtube": "node scripts/analyze-youtube.mjs",
+    "analyze:video": "node scripts/analyze-video.mjs",
+    "transcript:convert": "node scripts/convert-subtitles-to-transcript.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

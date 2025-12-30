@@ -24,6 +24,10 @@ VIDEOJSON_TTS_PROVIDER=dummy
 | `VIDEOJSON_TTS_PROVIDER` | - | `dummy` | TTS プロバイダー名 |
 | `ELEVENLABS_API_KEY` | △ | - | ElevenLabs 使用時のみ必須 |
 | `ELEVENLABS_VOICE_ID` | △ | - | ElevenLabs 使用時のみ必須 |
+| `NARRATION_PROVIDER` | - | `skeleton` | 台本生成プロバイダー |
+| `OPENAI_API_KEY` | △ | - | OpenAI 使用時のみ必須 |
+| `ANTHROPIC_API_KEY` | △ | - | Anthropic 使用時のみ必須 |
+| `OLLAMA_MODEL` | - | `llama2` | Ollama モデル名 |
 
 ## 2. プロバイダーの選び方
 
@@ -33,6 +37,23 @@ VIDEOJSON_TTS_PROVIDER=dummy
 |-------------|--------|------|------|
 | **dummy** | `VIDEOJSON_TTS_PROVIDER=dummy` | 無音ファイルを生成、API不要 | CI、開発、テスト |
 | **elevenlabs** | `VIDEOJSON_TTS_PROVIDER=elevenlabs` | 高品質、日本語対応 | 本番 |
+
+### Narration（台本生成）
+
+| プロバイダー | 設定値 | 特徴 | 用途 |
+|-------------|--------|------|------|
+| **skeleton** | `NARRATION_PROVIDER=skeleton` | テンプレート生成、API不要 | 手動編集のベース |
+| **openai** | `NARRATION_PROVIDER=openai` | GPT-4o-mini使用、高品質 | 自動生成 |
+| **anthropic** | `NARRATION_PROVIDER=anthropic` | Claude使用 | 自動生成 |
+| **ollama** | `NARRATION_PROVIDER=ollama` | ローカルLLM | オフライン |
+
+```bash
+# 骨組みのみ生成（デフォルト）
+npm run narration:skeleton -- --structure structure.json --out narration.md
+
+# AI自動生成（APIキー必要）
+OPENAI_API_KEY=xxx npm run narration:generate -- --structure structure.json --out narration.md
+```
 
 ### CI/CD での挙動
 

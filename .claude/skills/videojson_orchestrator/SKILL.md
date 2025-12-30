@@ -7,6 +7,10 @@ triggers:
   - "何から始めれば"
   - "フローを教えて"
   - "使い方"
+  - "字幕"
+  - "ローカル動画"
+  - "SRT"
+  - "VTT"
 inputs:
   - ユーザーの質問/要望
 outputs:
@@ -18,65 +22,120 @@ outputs:
 このスキルは VideoJSON の「入り口」です。
 ユーザーの意図を分類し、適切な専門スキルへ誘導します。
 
-## 意図の分類と誘導先
+## クイックルート選択
 
-### 1) 構造を作りたい（元動画をJSON化）
-キーワード: 「structure.json」「動画をJSON化」「YouTube解析」「構造を作る」「流れを抽出」
+| ユーザーの状況 | 案内するルート |
+|---------------|---------------|
+| YouTubeリンクがある | **ルート A** |
+| SRT/VTT字幕がある | **ルート B** |
+| ローカル動画がある | **ルート C** |
+| 台本を早く作りたい | **narration:skeleton** |
 
-#### A) YouTubeリンクから構造を抽出
+---
+
+## ルート A: YouTube字幕あり
+
+キーワード: 「YouTube」「リンク」「URL」
 
 ```bash
-npm run analyze:youtube -- --url "https://www.youtube.com/watch?v=VIDEO_ID" --out myproject/structure.json
+# Step 1: YouTube → structure.json
+npm run analyze:youtube -- --url "<URL>" --out structure.json
+
+# Step 2: 骨組み生成
+npm run narration:skeleton -- --structure structure.json --out narration.md
+
+# Step 3: 台本を編集（エディタで開く）
+
+# Step 4: 動画生成
+npm run render:run -- --structure structure.json --narration narration.md --out output.mp4
 ```
 
-**注意**: YouTubeの字幕が取得できない場合は以下の代替手段を案内:
+**字幕が取得できない場合**: ルート B または C を案内する。
 
-1. **yt-dlp で字幕をダウンロード**
-   ```bash
-   yt-dlp --write-auto-sub --sub-lang ja --skip-download "<URL>"
-   ```
+---
 
-2. **Whisper で文字起こし**
-   ```bash
-   yt-dlp -o video.mp4 "<URL>"
-   whisper video.mp4 --language ja --output_format json
-   ```
+## ルート B: SRT/VTT字幕あり
 
-3. **手動で transcript.json を作成**
-   - `examples/fixtures/transcript.sample.json` を参考に
-
-#### B) transcript.json から構造を抽出
+キーワード: 「SRT」「VTT」「字幕ファイル」「yt-dlp」
 
 ```bash
-npm run analyze:transcript -- --transcript myproject/transcript.json --out myproject/structure.json
+# Step 1: SRT/VTT → transcript.json
+npm run transcript:convert -- --in subtitles.srt --out transcript.json --language ja
+
+# Step 2: transcript → structure.json
+npm run analyze:transcript -- --transcript transcript.json --out structure.json
+
+# Step 3-4: ルート A と同じ
+npm run narration:skeleton -- --structure structure.json --out narration.md
+# 台本を編集
+npm run render:run -- --structure structure.json --narration narration.md --out output.mp4
 ```
 
-→ 詳細は **videojson_pipeline** スキルを参照
-- 入力: 元動画（YouTubeリンク or ファイルパス）
-- 出力: structure.json
-- 検証: npm run schema:validate
+**字幕の入手方法**:
+```bash
+# yt-dlp で字幕をダウンロード
+yt-dlp --write-auto-sub --sub-lang ja --skip-download "<URL>"
+```
 
-### 2) 台本を作りたい
-キーワード: 「narration.md」「台本を生成」「スクリプト」「台詞」「ナレーション」
+---
 
-→ **narration_generator** スキルを使う
-- 入力: structure.json + テーマ
-- 出力: narration.md
-- 検証: npm run validate（整合性チェック含む）
+## ルート C: ローカル動画あり
 
-### 3) 自動編集用JSONを作りたい
-キーワード: 「render.json」「自動編集」「レンダリング設計」「動画生成設定」
-
-→ **render_generator** スキルを使う
-- 入力: structure.json + narration.md
-- 出力: render.json
-- 検証: npm run schema:validate
-
-### 4) 動画を生成したい
-キーワード: 「mp4を作る」「動画を生成」「レンダリング」「render:run」
+キーワード: 「ローカル動画」「mp4」「Whisper」「文字起こし」
 
 ```bash
-npm run render:run -- --structure myproject/structure.json --narration myproject/narration.md --out myproject/output.mp4
+# Step 1: 動画 → structure.json（Whisper使用）
+npm run analyze:video -- --video video.mp4 --out structure.json --language ja
+
+# Step 2-4: ルート A と同じ
+npm run narration:skeleton -- --structure structure.json --out narration.md
+# 台本を編集
+npm run render:run -- --structure structure.json --narration narration.md --out output.mp4
+```
+
+**Whisperがない場合**:
+スクリプトがインストール手順を表示します。
+```bash
+# Python版
+pip install openai-whisper
+
+# macOS
+brew install whisper-cpp
+```
+
+---
+
+## 台本を早く作りたい
+
+キーワード: 「台本」「narration」「スクリプト」「ナレーション」
+
+### 骨組み生成（手動編集用）
+
+```bash
+npm run narration:skeleton -- --structure structure.json --out narration.md
+```
+
+### AI自動生成（APIキー必要）
+
+```bash
+# OpenAI
+OPENAI_API_KEY=xxx npm run narration:generate -- --structure structure.json --out narration.md
+
+# Anthropic
+ANTHROPIC_API_KEY=xxx npm run narration:generate -- --structure structure.json --out narration.md --provider anthropic
+```
+
+---
+
+## 動画を生成したい
+
+キーワード: 「mp4」「動画生成」「レンダリング」「render:run」
+
+```bash
+npm run render:run -- \
+  --structure structure.json \
+  --narration narration.md \
+  --out output.mp4
 ```
 
 このコマンドは以下を自動実行:
@@ -85,14 +144,7 @@ npm run render:run -- --structure myproject/structure.json --narration myproject
 3. アセットの解決とマテリアライズ
 4. ffmpeg でのmp4レンダリング
 
-### 5) 一括で全部やりたい
-キーワード: 「全部」「一括」「最初から最後まで」「自動で」
-
-→ 順番に実行:
-1. analyze:youtube または analyze:transcript → structure.json
-2. narration_generator → narration.md（手動で編集）
-3. render:run → output.mp4
-4. 最後に npm run validate
+---
 
 ## 重要なルール
 
@@ -101,22 +153,42 @@ npm run render:run -- --structure myproject/structure.json --narration myproject
 - **元動画のコピーにならないよう台本は必ず書き換える**
 - **第三者の声・顔の模倣は禁止**（本人許諾がある素材のみ）
 
+---
+
 ## 迷ったときの対応
 
 ユーザーの意図が不明なときは、以下を確認する:
-1. 何を入力として持っているか（動画？structure.json？narration.md？）
-2. 何を出力したいか（構造？台本？render設定？動画？）
-3. その回答に応じて適切なスキルへ誘導する
+1. 何を入力として持っているか？
+   - YouTubeリンク → ルート A
+   - SRT/VTT字幕 → ルート B
+   - ローカル動画 → ルート C
+   - structure.json → 台本生成へ
+   - structure + narration → 動画生成へ
+
+2. 何を出力したいか？
+   - 構造（structure.json）
+   - 台本（narration.md）
+   - 動画（output.mp4）
+
+---
 
 ## 使い方の例
 
 ```
 ユーザー: 「動画制作を始めたい」
-→ 「何を入力としてお持ちですか？（YouTubeリンク/動画ファイル/structure.json など）」
+→ 「何をお持ちですか？」
+  - YouTubeリンク → ルート A
+  - SRT/VTT字幕 → ルート B
+  - ローカル動画 → ルート C
 
-ユーザー: 「YouTubeリンクがある」
-→ videojson_pipeline スキルを使って structure.json を生成
+ユーザー: 「YouTubeの字幕が取れない」
+→ ルート B（yt-dlp で字幕をダウンロード）または ルート C（Whisper）を案内
 
-ユーザー: 「structure.json から台本を作りたい」
-→ narration_generator スキルを使って narration.md を生成
+ユーザー: 「Whisperがインストールされていない」
+→ インストール手順を案内:
+  pip install openai-whisper
+
+ユーザー: 「台本を早く作りたい」
+→ npm run narration:skeleton を案内
+→ APIキーがあれば npm run narration:generate も案内
 ```

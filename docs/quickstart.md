@@ -13,126 +13,149 @@ npm install
 
 ---
 
-## フロー A: YouTube動画から構造を抽出して制作
+## どのルートを選ぶ？
+
+| あなたの状況 | 選ぶルート |
+|-------------|-----------|
+| YouTube動画のリンクがある | **ルート A** |
+| SRT/VTT 字幕ファイルがある | **ルート B** |
+| ローカルに動画ファイルがある | **ルート C** |
+
+---
+
+## ルート A: YouTube字幕あり
+
+**フロー**: `YouTube URL` → `structure.json` → `narration.md` → `output.mp4`
 
 ### Step 1: YouTube動画を分析
 
 ```bash
-npm run analyze:youtube -- --url "https://www.youtube.com/watch?v=VIDEO_ID" --out myproject/structure.json
+npm run analyze:youtube -- \
+  --url "https://www.youtube.com/watch?v=VIDEO_ID" \
+  --out myproject/structure.json
 ```
 
-**注意**: YouTubeの字幕が取得できない場合は、[代替手段](#字幕が取得できない場合)を参照してください。
+**字幕が取得できない場合**: ルート B または C を試してください。
 
-### Step 2: narration.md を作成
-
-生成された `structure.json` を参考に、`narration.md` を作成します。
+### Step 2: 台本の骨組みを生成
 
 ```bash
-# 構造の確認
-cat myproject/structure.json | jq '.segments[] | {id, type, summary}'
-
-# narration.md を作成
-touch myproject/narration.md
+npm run narration:skeleton -- \
+  --structure myproject/structure.json \
+  --out myproject/narration.md
 ```
 
-`narration.md` の書式:
+### Step 3: 台本を編集
+
+`myproject/narration.md` を開いて、`TODO` の部分を実際の台本に置き換えます。
 
 ```markdown
 # s01
+[話者: host]
 こんにちは、今回の動画では〇〇について解説します。
 
 # s02
+[話者: host]
 まず最初に、基本的な概念を説明しましょう。
-
-# s03
-ご視聴ありがとうございました。
 ```
 
-**重要**:
-- 各セグメントは `# s01` のようにセグメントIDで始めます
-- セグメントIDは `structure.json` の `segments[].id` と一致させてください
-
-### Step 3: 動画を生成
+### Step 4: 動画を生成
 
 ```bash
-npm run render:run -- --structure myproject/structure.json --narration myproject/narration.md --out myproject/output.mp4
+npm run render:run -- \
+  --structure myproject/structure.json \
+  --narration myproject/narration.md \
+  --out myproject/output.mp4
 ```
 
 ---
 
-## フロー B: 既存の transcript から制作
+## ルート B: SRT/VTT字幕あり
 
-すでに文字起こしデータがある場合:
+**フロー**: `SRT/VTT` → `transcript.json` → `structure.json` → `narration.md` → `output.mp4`
 
-### Step 1: transcript.json を準備
+### Step 1: 字幕を transcript.json に変換
 
-```json
-{
-  "schema_version": "1.0.0",
-  "language": "ja",
-  "items": [
-    {"start_ms": 0, "end_ms": 5000, "text": "最初のテキスト"},
-    {"start_ms": 5000, "end_ms": 10000, "text": "次のテキスト"}
-  ]
-}
+```bash
+npm run transcript:convert -- \
+  --in subtitles.srt \
+  --out myproject/transcript.json \
+  --language ja
 ```
 
 ### Step 2: 構造を生成
 
 ```bash
-npm run analyze:transcript -- --transcript myproject/transcript.json --out myproject/structure.json
+npm run analyze:transcript -- \
+  --transcript myproject/transcript.json \
+  --out myproject/structure.json
 ```
 
-### Step 3: narration.md を作成して動画生成
+### Step 3-4: 台本作成と動画生成
 
-フロー A の Step 2, 3 と同様です。
+ルート A の Step 2-4 と同じです。
+
+```bash
+# 骨組み生成
+npm run narration:skeleton -- \
+  --structure myproject/structure.json \
+  --out myproject/narration.md
+
+# 台本を編集（エディタで開く）
+
+# 動画生成
+npm run render:run -- \
+  --structure myproject/structure.json \
+  --narration myproject/narration.md \
+  --out myproject/output.mp4
+```
 
 ---
 
-## フロー C: 最小限の手動制作
+## ルート C: ローカル動画あり
 
-examples/smoke を参考に、ゼロから作成:
+**フロー**: `video.mp4` → `transcript.json` → `structure.json` → `narration.md` → `output.mp4`
+
+**必要**: Whisper がインストールされていること
+
+### Step 1: 動画を分析（Whisper使用）
 
 ```bash
-# サンプルをコピー
-cp -r examples/smoke myproject
-
-# 必要に応じて編集
-# - structure.json: セグメント構成
-# - render.json: レンダリング設定
-# - narration.md: 台本
+npm run analyze:video -- \
+  --video video.mp4 \
+  --out myproject/structure.json \
+  --language ja
 ```
+
+**Whisperが無い場合**: インストール手順が表示されます。
+
+### Step 2-4: 台本作成と動画生成
+
+ルート A の Step 2-4 と同じです。
 
 ---
 
-## 字幕が取得できない場合
+## 補足: 字幕の入手方法
 
-YouTubeの字幕が取得できない場合の代替手段:
-
-### 方法1: yt-dlp で字幕をダウンロード
+### yt-dlp で字幕をダウンロード
 
 ```bash
-# 字幕ファイルをダウンロード
-yt-dlp --write-auto-sub --sub-lang ja --skip-download "https://www.youtube.com/watch?v=VIDEO_ID"
+# 字幕ファイルのみダウンロード
+yt-dlp --write-auto-sub --sub-lang ja --skip-download "<URL>"
 
-# 出力された .vtt や .srt を transcript.json に変換（手動）
+# その後、ルート B で処理
+npm run transcript:convert -- --in "*.ja.vtt" --out transcript.json
 ```
 
-### 方法2: Whisper で文字起こし
+### Whisper で文字起こし
 
 ```bash
-# 動画をダウンロード
-yt-dlp -o video.mp4 "https://www.youtube.com/watch?v=VIDEO_ID"
+# インストール（Python）
+pip install openai-whisper
 
-# Whisper で文字起こし
-whisper video.mp4 --language ja --output_format json
-
-# 出力を transcript.json 形式に変換
+# 実行
+npm run analyze:video -- --video video.mp4 --out structure.json
 ```
-
-### 方法3: 手動で transcript.json を作成
-
-`examples/fixtures/transcript.sample.json` を参考に手動作成。
 
 ---
 
@@ -140,9 +163,13 @@ whisper video.mp4 --language ja --output_format json
 
 | コマンド | 説明 |
 |----------|------|
-| `npm run analyze:youtube` | YouTube動画からstructure.jsonを生成 |
-| `npm run analyze:transcript` | transcript.jsonからstructure.jsonを生成 |
-| `npm run render:run` | structure + narration から mp4 を生成 |
+| `npm run analyze:youtube` | YouTube → structure.json |
+| `npm run analyze:video` | ローカル動画 → structure.json（Whisper使用） |
+| `npm run analyze:transcript` | transcript.json → structure.json |
+| `npm run transcript:convert` | SRT/VTT → transcript.json |
+| `npm run narration:skeleton` | structure.json → narration.md（骨組み） |
+| `npm run narration:generate` | structure.json → narration.md（AI生成、APIキー必要） |
+| `npm run render:run` | structure + narration → mp4 |
 | `npm run validate` | スキーマ検証 |
 | `npm run render:smoke` | スモークテスト |
 
@@ -158,14 +185,22 @@ whisper video.mp4 --language ja --output_format json
 
 ## トラブルシューティング
 
-### Q: "No TTS segments found" と表示される
+### Q: YouTube字幕の取得に失敗する
 
-render.json で `audio.mode: "tts"` を使用していますか？
-`audio.mode: "uploaded"` の場合は TTS は使用されません。
+- 動画に字幕が設定されていない → ルート B または C を使用
+- 地域制限や年齢制限がある → ルート C を使用
+
+### Q: Whisper がインストールされていない
+
+```bash
+# Python 版をインストール
+pip install openai-whisper
+
+# または Homebrew（macOS）
+brew install whisper-cpp
+```
 
 ### Q: ffmpeg が見つからない
-
-ffmpeg をインストールしてください:
 
 ```bash
 # macOS
@@ -175,8 +210,7 @@ brew install ffmpeg
 sudo apt-get install ffmpeg
 ```
 
-### Q: YouTube字幕の取得に失敗する
+### Q: "No TTS segments found" と表示される
 
-- 動画に字幕が設定されていない可能性があります
-- 地域制限や年齢制限がある可能性があります
-- [代替手段](#字幕が取得できない場合)を試してください
+- render.json で `audio.mode: "tts"` を使用していますか？
+- `audio.mode: "uploaded"` の場合は TTS は使用されません
