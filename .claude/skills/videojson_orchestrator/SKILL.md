@@ -23,7 +23,35 @@ outputs:
 ### 1) 構造を作りたい（元動画をJSON化）
 キーワード: 「structure.json」「動画をJSON化」「YouTube解析」「構造を作る」「流れを抽出」
 
-→ **videojson_pipeline** スキルを使う
+#### A) YouTubeリンクから構造を抽出
+
+```bash
+npm run analyze:youtube -- --url "https://www.youtube.com/watch?v=VIDEO_ID" --out myproject/structure.json
+```
+
+**注意**: YouTubeの字幕が取得できない場合は以下の代替手段を案内:
+
+1. **yt-dlp で字幕をダウンロード**
+   ```bash
+   yt-dlp --write-auto-sub --sub-lang ja --skip-download "<URL>"
+   ```
+
+2. **Whisper で文字起こし**
+   ```bash
+   yt-dlp -o video.mp4 "<URL>"
+   whisper video.mp4 --language ja --output_format json
+   ```
+
+3. **手動で transcript.json を作成**
+   - `examples/fixtures/transcript.sample.json` を参考に
+
+#### B) transcript.json から構造を抽出
+
+```bash
+npm run analyze:transcript -- --transcript myproject/transcript.json --out myproject/structure.json
+```
+
+→ 詳細は **videojson_pipeline** スキルを参照
 - 入力: 元動画（YouTubeリンク or ファイルパス）
 - 出力: structure.json
 - 検証: npm run schema:validate
@@ -44,13 +72,26 @@ outputs:
 - 出力: render.json
 - 検証: npm run schema:validate
 
-### 4) 一括で全部やりたい
+### 4) 動画を生成したい
+キーワード: 「mp4を作る」「動画を生成」「レンダリング」「render:run」
+
+```bash
+npm run render:run -- --structure myproject/structure.json --narration myproject/narration.md --out myproject/output.mp4
+```
+
+このコマンドは以下を自動実行:
+1. narration.md と structure.json の整合性チェック
+2. render.json の自動生成
+3. アセットの解決とマテリアライズ
+4. ffmpeg でのmp4レンダリング
+
+### 5) 一括で全部やりたい
 キーワード: 「全部」「一括」「最初から最後まで」「自動で」
 
 → 順番に実行:
-1. videojson_pipeline → structure.json
-2. narration_generator → narration.md
-3. render_generator → render.json
+1. analyze:youtube または analyze:transcript → structure.json
+2. narration_generator → narration.md（手動で編集）
+3. render:run → output.mp4
 4. 最後に npm run validate
 
 ## 重要なルール

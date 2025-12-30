@@ -24,3 +24,10 @@ jobs:
 
       - name: Validate Schemas and Narration consistency
         run: npm run validate
+
+      - name: Test analyze:transcript (fixtures only, no network)
+        run: |
+          npm run analyze:transcript -- \
+            --transcript examples/fixtures/transcript.sample.json \
+            --out .tmp/structure.from-transcript.json
+          node scripts/validate-json.mjs schemas/structure.schema.json .tmp/structure.from-transcript.json

@@ -28,7 +28,9 @@
     "render:materialize": "node scripts/materialize-render.mjs",
     "render:ffmpeg": "node scripts/render-ffmpeg.mjs",
     "render:smoke": "npm run render:bootstrap && npm run render:materialize -- --render examples/smoke/render.json && npm run render:ffmpeg -- --render examples/smoke/render.materialized.json",
-    "render:run": "node scripts/render-run.mjs"
+    "render:run": "node scripts/render-run.mjs",
+    "analyze:transcript": "node scripts/analyze-transcript.mjs",
+    "analyze:youtube": "node scripts/analyze-youtube.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -45,8 +47,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@types/bcryptjs": "^2.4.6",
@@ -54,6 +54,8 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^5.1.2",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.17.0",
     "eslint-config-next": "15.1.3",
@@ -63,7 +65,8 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "youtube-transcript": "^1.2.1"
   },
   "engines": {
     "node": ">=20"

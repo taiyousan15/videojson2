@@ -93,6 +93,16 @@ npm run render:generate -- --structure <path> --narration <path> --out <path>
 - 音声: assets としてアップロード → 本人の声として利用（第三者の声は禁止）
 
 ---
+
+## 参考リンク
+
+- **[クイックスタート](./quickstart.md)** - 初めての方はこちらから
+- [設定ガイド](./config.md) - 環境変数とプロバイダー設定
+- [レンダリングガイド](./rendering.md) - 詳細なレンダリングオプション
+- [プロバイダーガイド](./providers.md) - TTS/リップシンクなどの設定
+
+---
+
 迷ったら:
 - docs/requirements.md を読む（何を守るべきか）
 - schemas/ を通す（壊れていないか）

@@ -4,6 +4,7 @@ import process from "node:process";
 const checks = [
   ["schemas/structure.schema.json", "examples/minimal/structure.json"],
   ["schemas/render.schema.json", "examples/minimal/render.json"],
+  ["schemas/transcript.schema.json", "examples/fixtures/transcript.sample.json"],
 ];
 
 let failed = false;
