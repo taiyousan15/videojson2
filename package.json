@@ -34,7 +34,11 @@
     "analyze:transcript": "node scripts/analyze-transcript.mjs",
     "analyze:youtube": "node scripts/analyze-youtube.mjs",
     "analyze:video": "node scripts/analyze-video.mjs",
-    "transcript:convert": "node scripts/convert-subtitles-to-transcript.mjs"
+    "transcript:convert": "node scripts/convert-subtitles-to-transcript.mjs",
+    "project:init": "node scripts/project-init.mjs",
+    "preview:html": "node scripts/preview-html.mjs",
+    "validate:strict": "node scripts/validate-strict.mjs",
+    "project:run": "node scripts/project-run.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

@@ -33,7 +33,8 @@
           "enum": [
             "youtube",
             "upload",
-            "transcript"
+            "transcript",
+            "manual"
           ]
         },
         "source": {

@@ -1,0 +1,40 @@
+{
+  "name": "vertical-short",
+  "description": "縦型ショート動画（9:16、Shorts/Reels/TikTok向け、60秒以内推奨）",
+  "render": {
+    "resolution": {
+      "width": 1080,
+      "height": 1920
+    },
+    "fps": 30,
+    "audio": {
+      "mode": "tts",
+      "provider": "dummy"
+    },
+    "captions": {
+      "enabled": true,
+      "style": "center-large",
+      "font_size": 72,
+      "font_color": "#FFFFFF",
+      "background": "rgba(0,0,0,0.8)",
+      "stroke": {
+        "color": "#000000",
+        "width": 3
+      }
+    }
+  },
+  "segments": {
+    "intro_duration_ms": 2000,
+    "outro_duration_ms": 3000
+  },
+  "constraints": {
+    "max_duration_ms": 60000,
+    "min_duration_ms": 15000
+  },
+  "tips": [
+    "最初の1-2秒でフックを入れる",
+    "テンポを速く、間延びさせない",
+    "字幕は大きく、中央寄せで読みやすく",
+    "縦画面を意識した構図"
+  ]
+}

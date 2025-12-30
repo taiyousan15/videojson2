@@ -103,7 +103,7 @@ function generateSkeleton(structure, options) {
 
   for (const segment of segments) {
     // セグメント見出し
-    lines.push(`# ${segment.id}`);
+    lines.push(`## ${segment.id}`);
 
     // 話者
     const speaker = segment.speaker_id || options.speaker;

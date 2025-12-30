@@ -18,6 +18,8 @@ import { spawnSync } from "child_process";
 
 const MIN_SEGMENT_MS = 15000; // 15秒
 const MAX_SEGMENT_MS = 30000; // 30秒
+const PAUSE_THRESHOLD_MS = 1500; // 1.5秒以上の間隔を無音区間とみなす
+const STRONG_BREAK_THRESHOLD_MS = 3000; // 3秒以上の間隔は強制分割
 
 function parseArgs(args) {
   const result = {
@@ -50,7 +52,44 @@ Example:
 }
 
 /**
- * transcript items を時間でチャンク分割
+ * 無音区間（ポーズ）を検出してブレークポイントを見つける
+ */
+function detectPauses(items) {
+  const pausePoints = [];
+
+  for (let i = 1; i < items.length; i++) {
+    const gap = items[i].start_ms - items[i - 1].end_ms;
+
+    if (gap >= STRONG_BREAK_THRESHOLD_MS) {
+      // 3秒以上のギャップは強制分割ポイント
+      pausePoints.push({ index: i, gap, type: "strong" });
+    } else if (gap >= PAUSE_THRESHOLD_MS) {
+      // 1.5秒以上のギャップは候補分割ポイント
+      pausePoints.push({ index: i, gap, type: "pause" });
+    }
+  }
+
+  return pausePoints;
+}
+
+/**
+ * 話者変更を検出
+ */
+function detectSpeakerChanges(items) {
+  const changePoints = [];
+
+  for (let i = 1; i < items.length; i++) {
+    if (items[i].speaker && items[i - 1].speaker &&
+        items[i].speaker !== items[i - 1].speaker) {
+      changePoints.push({ index: i, from: items[i - 1].speaker, to: items[i].speaker });
+    }
+  }
+
+  return changePoints;
+}
+
+/**
+ * transcript items を時間・無音・話者変更でチャンク分割
  */
 function chunkByTime(items, minMs, maxMs) {
   const segments = [];
@@ -58,26 +97,72 @@ function chunkByTime(items, minMs, maxMs) {
     items: [],
     start_ms: 0,
     end_ms: 0,
+    speaker: null,
   };
 
-  for (const item of items) {
+  // 無音区間と話者変更を検出
+  const pauses = detectPauses(items);
+  const speakerChanges = detectSpeakerChanges(items);
+
+  // 強制分割ポイントをセットにする
+  const strongBreaks = new Set(
+    pauses.filter(p => p.type === "strong").map(p => p.index)
+  );
+  const pauseBreaks = new Set(
+    pauses.filter(p => p.type === "pause").map(p => p.index)
+  );
+  const speakerBreaks = new Set(speakerChanges.map(c => c.index));
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
     if (currentSegment.items.length === 0) {
       currentSegment.start_ms = item.start_ms;
+      currentSegment.speaker = item.speaker;
     }
 
     currentSegment.items.push(item);
     currentSegment.end_ms = item.end_ms;
 
     const duration = currentSegment.end_ms - currentSegment.start_ms;
+    const nextIndex = i + 1;
 
-    // セグメントがmaxMsを超えたら、または minMs以上で区切りの良いところ
+    // 強制分割ポイント（3秒以上の無音）
+    if (strongBreaks.has(nextIndex) && currentSegment.items.length > 0) {
+      segments.push({ ...currentSegment });
+      currentSegment = { items: [], start_ms: 0, end_ms: 0, speaker: null };
+      continue;
+    }
+
+    // セグメントがmaxMsを超えたら分割
     if (duration >= maxMs) {
       segments.push({ ...currentSegment });
-      currentSegment = { items: [], start_ms: 0, end_ms: 0 };
-    } else if (duration >= minMs && item.text.match(/[。！？\.\!\?]$/)) {
+      currentSegment = { items: [], start_ms: 0, end_ms: 0, speaker: null };
+      continue;
+    }
+
+    // minMs以上で、かつ分割に適したポイント
+    if (duration >= minMs) {
+      // 話者変更ポイント
+      if (speakerBreaks.has(nextIndex)) {
+        segments.push({ ...currentSegment });
+        currentSegment = { items: [], start_ms: 0, end_ms: 0, speaker: null };
+        continue;
+      }
+
+      // 無音ポイント
+      if (pauseBreaks.has(nextIndex)) {
+        segments.push({ ...currentSegment });
+        currentSegment = { items: [], start_ms: 0, end_ms: 0, speaker: null };
+        continue;
+      }
+
       // 文末で区切る
-      segments.push({ ...currentSegment });
-      currentSegment = { items: [], start_ms: 0, end_ms: 0 };
+      if (item.text.match(/[。！？\.\!\?]$/)) {
+        segments.push({ ...currentSegment });
+        currentSegment = { items: [], start_ms: 0, end_ms: 0, speaker: null };
+        continue;
+      }
     }
   }
 
@@ -196,13 +281,20 @@ function generateStructure(transcript) {
     const type = inferSegmentType(index, chunks.length, texts);
     const summary = generateAbstractSummary(texts);
 
-    return {
+    const segment = {
       id: `s${String(index + 1).padStart(2, "0")}`,
       type,
       start_ms: chunk.start_ms,
       end_ms: chunk.end_ms,
       summary,
     };
+
+    // 話者情報があれば追加
+    if (chunk.speaker) {
+      segment.speaker_id = chunk.speaker;
+    }
+
+    return segment;
   });
 
   // structure.json を構築

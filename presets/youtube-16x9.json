@@ -1,0 +1,35 @@
+{
+  "name": "youtube-16x9",
+  "description": "YouTube標準動画（16:9、1080p、長編対応）",
+  "render": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    },
+    "fps": 30,
+    "audio": {
+      "mode": "tts",
+      "provider": "dummy"
+    },
+    "captions": {
+      "enabled": true,
+      "style": "bottom-center",
+      "font_size": 48,
+      "font_color": "#FFFFFF",
+      "background": "rgba(0,0,0,0.7)"
+    }
+  },
+  "segments": {
+    "intro_duration_ms": 10000,
+    "outro_duration_ms": 15000
+  },
+  "constraints": {
+    "min_duration_ms": 60000
+  },
+  "tips": [
+    "冒頭15秒で視聴者を引き込む",
+    "チャプター分けを意識した構成",
+    "エンドカード用に最後15秒を確保",
+    "チャンネル登録・高評価の案内を入れる"
+  ]
+}

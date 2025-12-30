@@ -13,6 +13,40 @@ npm install
 
 ---
 
+## ゼロから始める（推奨）
+
+プロジェクトディレクトリを作成して、構造化されたワークフローで作業できます。
+
+### Step 1: プロジェクトを作成
+
+```bash
+npm run project:init -- --dir myproject --title "My First Video"
+```
+
+プリセットを指定することもできます：
+
+```bash
+# 縦型ショート動画用
+npm run project:init -- --dir shorts/ep01 --preset vertical-short
+
+# YouTube標準動画用
+npm run project:init -- --dir youtube/ep01 --preset youtube-16x9
+```
+
+### Step 2: 台本を編集
+
+`myproject/narration.md` を開いて、`TODO` の部分を実際の台本に置き換えます。
+
+### Step 3: 動画を生成
+
+```bash
+npm run project:run -- --project myproject
+```
+
+これで `myproject/outputs/output.mp4` に動画が生成されます。
+
+---
+
 ## どのルートを選ぶ？
 
 | あなたの状況 | 選ぶルート |
@@ -50,11 +84,11 @@ npm run narration:skeleton -- \
 `myproject/narration.md` を開いて、`TODO` の部分を実際の台本に置き換えます。
 
 ```markdown
-# s01
+## s01
 [話者: host]
 こんにちは、今回の動画では〇〇について解説します。
 
-# s02
+## s02
 [話者: host]
 まず最初に、基本的な概念を説明しましょう。
 ```
@@ -161,16 +195,37 @@ npm run analyze:video -- --video video.mp4 --out structure.json
 
 ## コマンド一覧
 
+### プロジェクト管理
+
+| コマンド | 説明 |
+|----------|------|
+| `npm run project:init` | 新規プロジェクトを作成 |
+| `npm run project:run` | プロジェクトから動画を生成 |
+
+### 分析・変換
+
 | コマンド | 説明 |
 |----------|------|
 | `npm run analyze:youtube` | YouTube → structure.json |
 | `npm run analyze:video` | ローカル動画 → structure.json（Whisper使用） |
 | `npm run analyze:transcript` | transcript.json → structure.json |
 | `npm run transcript:convert` | SRT/VTT → transcript.json |
+
+### 台本・レンダリング
+
+| コマンド | 説明 |
+|----------|------|
 | `npm run narration:skeleton` | structure.json → narration.md（骨組み） |
 | `npm run narration:generate` | structure.json → narration.md（AI生成、APIキー必要） |
 | `npm run render:run` | structure + narration → mp4 |
+
+### 検証・ユーティリティ
+
+| コマンド | 説明 |
+|----------|------|
 | `npm run validate` | スキーマ検証 |
+| `npm run validate:strict` | 厳格な一括検証 |
+| `npm run preview:html` | HTMLプレビュー生成 |
 | `npm run render:smoke` | スモークテスト |
 
 ---
