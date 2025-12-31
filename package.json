@@ -2,6 +2,10 @@
   "name": "videojson",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "bin": {
+    "videojson": "./scripts/cli/videojson.mjs"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
