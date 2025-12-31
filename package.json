@@ -38,7 +38,10 @@
     "project:init": "node scripts/project-init.mjs",
     "preview:html": "node scripts/preview-html.mjs",
     "validate:strict": "node scripts/validate-strict.mjs",
-    "project:run": "node scripts/project-run.mjs"
+    "project:run": "node scripts/project-run.mjs",
+    "project:create": "node scripts/project-create.mjs",
+    "project:variants": "node scripts/project-variants.mjs",
+    "doctor": "node scripts/doctor.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

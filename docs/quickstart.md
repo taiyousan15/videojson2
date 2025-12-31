@@ -11,31 +11,54 @@
 npm install
 ```
 
+### 環境チェック
+
+セットアップに問題がないか確認できます：
+
+```bash
+npm run doctor
+```
+
 ---
 
-## ゼロから始める（推奨）
+## ゼロから始める: project:create（推奨）
 
-プロジェクトディレクトリを作成して、構造化されたワークフローで作業できます。
+`project:create` は入力ソースからプロジェクトを一発で作成する統一コマンドです。
+
+### 入力ルートを選ぶ
+
+| 入力ソース | コマンド例 |
+|-----------|-----------|
+| YouTube URL | `--youtube-url "https://..."` |
+| SRT/VTT 字幕 | `--subtitles input.srt` |
+| ローカル動画 | `--video input.mp4` |
+| transcript.json | `--transcript data.json` |
 
 ### Step 1: プロジェクトを作成
 
 ```bash
-npm run project:init -- --dir myproject --title "My First Video"
-```
+# SRT字幕から作成（ネット不要・初心者向け）
+npm run project:create -- --subtitles input.srt --out myproject --preset default
 
-プリセットを指定することもできます：
+# YouTube から作成
+npm run project:create -- --youtube-url "https://youtube.com/watch?v=..." --out myproject
 
-```bash
-# 縦型ショート動画用
-npm run project:init -- --dir shorts/ep01 --preset vertical-short
+# ローカル動画から作成（Whisper必要）
+npm run project:create -- --video input.mp4 --out myproject --language ja
 
-# YouTube標準動画用
-npm run project:init -- --dir youtube/ep01 --preset youtube-16x9
+# transcript.json から作成（CI向け）
+npm run project:create -- --transcript data.json --out myproject
 ```
 
 ### Step 2: 台本を編集
 
 `myproject/narration.md` を開いて、`TODO` の部分を実際の台本に置き換えます。
+
+```markdown
+## s01
+[話者: host]
+こんにちは、今回の動画では〇〇について解説します。
+```
 
 ### Step 3: 動画を生成
 
@@ -44,6 +67,47 @@ npm run project:run -- --project myproject
 ```
 
 これで `myproject/outputs/output.mp4` に動画が生成されます。
+
+---
+
+## 量産: project:variants
+
+1つのプロジェクトから複数フォーマットの動画を一括生成できます。
+
+```bash
+# 全プリセット（default, vertical-short, youtube-16x9）で生成
+npm run project:variants -- --project myproject
+
+# 特定のプリセットのみ
+npm run project:variants -- --project myproject --presets "vertical-short,youtube-16x9"
+```
+
+出力先:
+- `myproject/outputs/default/output.mp4`
+- `myproject/outputs/vertical-short/output.mp4`
+- `myproject/outputs/youtube-16x9/output.mp4`
+
+---
+
+## 困ったら: doctor
+
+環境の問題を診断して対処法を案内します。
+
+```bash
+npm run doctor
+```
+
+詳しいトラブルシューティングは [troubleshooting.md](./troubleshooting.md) を参照してください。
+
+---
+
+## 従来のワークフロー: project:init
+
+手動でプロジェクトを初期化したい場合は `project:init` を使います：
+
+```bash
+npm run project:init -- --dir myproject --preset vertical-short
+```
 
 ---
 
@@ -195,12 +259,14 @@ npm run analyze:video -- --video video.mp4 --out structure.json
 
 ## コマンド一覧
 
-### プロジェクト管理
+### プロジェクト管理（推奨）
 
 | コマンド | 説明 |
 |----------|------|
-| `npm run project:init` | 新規プロジェクトを作成 |
+| `npm run project:create` | 入力ソースから一発でプロジェクト作成 |
 | `npm run project:run` | プロジェクトから動画を生成 |
+| `npm run project:variants` | 複数プリセットで一括生成 |
+| `npm run project:init` | 空のプロジェクトを初期化（手動用） |
 
 ### 分析・変換
 
@@ -223,6 +289,7 @@ npm run analyze:video -- --video video.mp4 --out structure.json
 
 | コマンド | 説明 |
 |----------|------|
+| `npm run doctor` | 環境チェックと問題診断 |
 | `npm run validate` | スキーマ検証 |
 | `npm run validate:strict` | 厳格な一括検証 |
 | `npm run preview:html` | HTMLプレビュー生成 |
