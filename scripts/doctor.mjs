@@ -281,6 +281,74 @@ function checkTtsProvider() {
   };
 }
 
+function checkLipsyncProvider() {
+  const provider = process.env.VIDEOJSON_LIPSYNC_PROVIDER || "dummy";
+
+  // dummy プロバイダーは ffmpeg のみ必要
+  if (provider === "dummy") {
+    const ffmpegCheck = checkCommand("ffmpeg", ["-version"]);
+    if (!ffmpegCheck.exists) {
+      return {
+        name: "Lipsync Provider",
+        status: "warn",
+        message: "dummy（ffmpeg必要）",
+        detail: "dummy lipsync プロバイダーには ffmpeg が必要です",
+        fix: `
+  ffmpeg をインストールしてください:
+    # macOS
+    brew install ffmpeg
+
+    # Ubuntu/Debian
+    sudo apt-get install ffmpeg
+`,
+        critical: false,
+      };
+    }
+
+    return {
+      name: "Lipsync Provider",
+      status: "ok",
+      message: "dummy（開発モード）",
+      detail: "静止画 + Ken Burns エフェクトで疑似リップシンクを生成します",
+      fix: null,
+    };
+  }
+
+  // 将来の http プロバイダー
+  if (provider === "http") {
+    const endpoint = process.env.LIPSYNC_HTTP_ENDPOINT;
+    if (!endpoint) {
+      return {
+        name: "Lipsync Provider",
+        status: "warn",
+        message: "http（エンドポイント未設定）",
+        detail: "LIPSYNC_HTTP_ENDPOINT が設定されていません",
+        fix: `
+  .env ファイルに以下を追加してください:
+    LIPSYNC_HTTP_ENDPOINT=http://localhost:8080/lipsync
+`,
+        critical: false,
+      };
+    }
+
+    return {
+      name: "Lipsync Provider",
+      status: "ok",
+      message: `http (${endpoint})`,
+      detail: "HTTP エンドポイントでリップシンクを生成します",
+      fix: null,
+    };
+  }
+
+  return {
+    name: "Lipsync Provider",
+    status: "ok",
+    message: provider,
+    detail: `Lipsync プロバイダー: ${provider}`,
+    fix: null,
+  };
+}
+
 function checkWritePermission(projectDir) {
   const testDirs = projectDir
     ? [
@@ -358,6 +426,7 @@ async function main() {
     checkNpmPackages(),
     checkEnvFile(),
     checkTtsProvider(),
+    checkLipsyncProvider(),
     checkWritePermission(options.project),
   ];
 
@@ -414,6 +483,7 @@ export async function runDoctor(options = {}) {
     checkNodeVersion(),
     checkFfmpeg(),
     checkNpmPackages(),
+    checkLipsyncProvider(),
     checkWritePermission(options.project),
   ];
 

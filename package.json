@@ -45,7 +45,8 @@
     "project:run": "node scripts/project-run.mjs",
     "project:create": "node scripts/project-create.mjs",
     "project:variants": "node scripts/project-variants.mjs",
-    "doctor": "node scripts/doctor.mjs"
+    "doctor": "node scripts/doctor.mjs",
+    "test:lipsync": "node tests/lipsync-e2e.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

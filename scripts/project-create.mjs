@@ -33,6 +33,8 @@ function parseArgs(args) {
     preset: "default",
     title: null,
     language: "ja",
+    avatar: null,           // 顔画像（lipsync用）
+    avatarConsent: false,   // 顔画像の使用許諾
     force: false,
     dryRun: false,
   };
@@ -54,6 +56,19 @@ function parseArgs(args) {
       result.title = args[++i];
     } else if (args[i] === "--language" && args[i + 1]) {
       result.language = args[++i];
+    } else if (args[i] === "--avatar" && args[i + 1]) {
+      result.avatar = args[++i];
+    } else if (args[i] === "--avatar-consent") {
+      // 次の引数が "true" または省略の場合はtrue
+      if (args[i + 1] === "true" || args[i + 1] === "1") {
+        result.avatarConsent = true;
+        i++;
+      } else if (args[i + 1] === "false" || args[i + 1] === "0") {
+        result.avatarConsent = false;
+        i++;
+      } else {
+        result.avatarConsent = true;
+      }
     } else if (args[i] === "--force" || args[i] === "-f") {
       result.force = true;
     } else if (args[i] === "--dry-run") {
@@ -86,6 +101,9 @@ Usage: npm run project:create -- <input> --out <projectDir> [options]
                            (default, vertical-short, youtube-16x9)
   --title <title>          動画タイトル
   --language <lang>        言語コード（デフォルト: ja）
+  --avatar <path>          アバター顔画像（lipsync用）
+  --avatar-consent         顔画像の使用許諾確認済みフラグ
+                           （自分自身の顔、または許可を得た素材のみ）
   --force, -f              既存ディレクトリを上書き
   --dry-run                実行せずに手順を表示
 
@@ -101,6 +119,10 @@ Examples:
 
   # transcript.jsonから（ネット不要・CI向け）
   npm run project:create -- --transcript data/transcript.json --out myproject
+
+  # Lipsync用にアバター顔画像を設定
+  npm run project:create -- --subtitles input.srt --out myproject \\
+    --avatar my_face.jpg --avatar-consent
 `);
 }
 
@@ -253,6 +275,54 @@ async function createProject(options) {
     } else {
       console.log(`  [DRY-RUN] mkdir -p ${fullPath}`);
     }
+  }
+
+  // アバター画像の処理
+  let avatarConfig = null;
+  if (options.avatar) {
+    const avatarSourcePath = path.resolve(options.avatar);
+    if (!fs.existsSync(avatarSourcePath)) {
+      showError(
+        `アバター画像が見つかりません: ${avatarSourcePath}`,
+        "正しいパスを指定してください"
+      );
+      return false;
+    }
+
+    // 許諾確認
+    if (!options.avatarConsent) {
+      console.log(`
+⚠️  警告: アバター画像の使用許諾が確認されていません
+
+リップシンク動画を生成する場合、使用する顔画像は:
+  - 自分自身の顔画像
+  - または、明確な許可を得た素材
+
+でなければなりません。許諾を確認済みの場合は --avatar-consent を追加してください。
+
+詳細: docs/safety-consent.md
+`);
+    }
+
+    // アバター画像をassets/にコピー
+    const avatarExt = path.extname(options.avatar);
+    const avatarFilename = `avatar${avatarExt}`;
+    const avatarDestPath = path.join(projectDir, "assets", avatarFilename);
+
+    if (!options.dryRun) {
+      fs.copyFileSync(avatarSourcePath, avatarDestPath);
+      console.log(`  ✅ アバター画像: assets/${avatarFilename}`);
+    } else {
+      console.log(`  [DRY-RUN] cp ${avatarSourcePath} ${avatarDestPath}`);
+    }
+
+    avatarConfig = {
+      asset_id: "avatar_face",
+      path: `assets/${avatarFilename}`,
+      consent: options.avatarConsent,
+      consent_type: options.avatarConsent ? "self" : null,
+      consent_date: options.avatarConsent ? new Date().toISOString().split("T")[0] : null,
+    };
   }
 
   // Step 1: 入力を transcript.json に変換（必要な場合）
@@ -408,6 +478,11 @@ async function createProject(options) {
     },
   };
 
+  // アバター設定を追加
+  if (avatarConfig) {
+    config.avatar = avatarConfig;
+  }
+
   const configPath = path.join(projectDir, "config.json");
   if (!options.dryRun) {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -417,7 +492,7 @@ async function createProject(options) {
   }
 
   // README.md
-  const readme = generateReadme(options, preset, route);
+  const readme = generateReadme(options, preset, route, avatarConfig);
   const readmePath = path.join(projectDir, "README.md");
   if (!options.dryRun) {
     fs.writeFileSync(readmePath, readme);
@@ -436,6 +511,17 @@ async function createProject(options) {
   }
 
   // 完了メッセージ
+  const avatarInfo = avatarConfig
+    ? `  │   └── ${path.basename(avatarConfig.path)}  # アバター顔画像${avatarConfig.consent ? " (許諾済)" : ""}\n`
+    : "";
+  const avatarNote = avatarConfig
+    ? `
+4. リップシンク動画を生成（オプション）:
+   → generate-render で --lipsync オプションを使用
+   → アバター: ${avatarConfig.path}${avatarConfig.consent ? " (許諾確認済み)" : " (要許諾確認)"}
+`
+    : "";
+
   console.log(`
 ╔════════════════════════════════════════════════════════════════╗
 ║  ✅ プロジェクト作成完了!                                      ║
@@ -448,7 +534,7 @@ async function createProject(options) {
   ├── narration.md     # 台本（要編集）
   ├── README.md        # 使い方
   ├── assets/          # 素材
-  ├── work/            # 中間ファイル
+${avatarInfo}  ├── work/            # 中間ファイル
   └── outputs/         # 出力先
 
 ━━━ 次のステップ ━━━
@@ -462,13 +548,33 @@ async function createProject(options) {
 
 3. プレビュー（オプション）:
    npm run preview:html -- --structure ${structurePath} --narration ${narrationPath}
-`);
+${avatarNote}`);
 
   return true;
 }
 
-function generateReadme(options, preset, route) {
+function generateReadme(options, preset, route, avatarConfig = null) {
   const projectName = options.title || path.basename(options.out);
+  const avatarLine = avatarConfig
+    ? `- **アバター**: \`${avatarConfig.path}\`${avatarConfig.consent ? " (許諾済み)" : ""}\n`
+    : "";
+  const avatarSection = avatarConfig
+    ? `
+### 4. リップシンク動画を生成（オプション）
+
+アバター顔画像が設定されているため、リップシンク動画を生成できます。
+
+\`\`\`bash
+npm run generate:render -- --structure structure.json --narration narration.md \\
+  --out render.json --lipsync
+\`\`\`
+${!avatarConfig.consent ? `
+> ⚠️ **注意**: アバターの使用許諾が確認されていません。
+> リップシンク動画を公開する場合は、必ず許諾を確認してください。
+` : ""}
+`
+    : "";
+
   return `# ${projectName}
 
 VideoJSON プロジェクト
@@ -479,7 +585,7 @@ VideoJSON プロジェクト
 - **入力ルート**: ${route}
 - **プリセット**: ${preset.name || options.preset}
 - **言語**: ${options.language}
-
+${avatarLine}
 ## ディレクトリ構成
 
 \`\`\`
@@ -510,7 +616,7 @@ npm run project:run -- --project ${options.out}
 # 複数プリセットで一括生成
 npm run project:variants -- --project ${options.out}
 \`\`\`
-
+${avatarSection}
 ## 注意事項
 
 - \`assets/\`, \`work/\`, \`outputs/\` は .gitignore されています

@@ -5,7 +5,10 @@ import process from "node:process";
 import path from "node:path";
 
 function parseArgs(args) {
-  const result = {};
+  const result = {
+    lipsync: false,
+    lipsyncProvider: "dummy",
+  };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--structure" && args[i + 1]) {
       result.structure = args[++i];
@@ -13,6 +16,12 @@ function parseArgs(args) {
       result.narration = args[++i];
     } else if (args[i] === "--out" && args[i + 1]) {
       result.out = args[++i];
+    } else if (args[i] === "--config" && args[i + 1]) {
+      result.config = args[++i];
+    } else if (args[i] === "--lipsync") {
+      result.lipsync = true;
+    } else if (args[i] === "--lipsync-provider" && args[i + 1]) {
+      result.lipsyncProvider = args[++i];
     }
   }
   return result;
@@ -54,9 +63,13 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (!args.structure || !args.narration || !args.out) {
-    console.error(
-      "Usage: node scripts/generate-render.mjs --structure <path> --narration <path> --out <path>"
-    );
+    console.error(`Usage: node scripts/generate-render.mjs --structure <path> --narration <path> --out <path> [options]
+
+Options:
+  --config <path>          プロジェクト設定ファイル（config.json）
+  --lipsync                リップシンクモードを有効化
+  --lipsync-provider <name> リップシンクプロバイダー（デフォルト: dummy）
+`);
     process.exit(2);
   }
 
@@ -66,6 +79,41 @@ async function main() {
 
   const narrationRaw = await fs.readFile(args.narration, "utf8");
   const narrationSegments = parseNarration(narrationRaw);
+
+  // Read config if provided
+  let projectConfig = null;
+  if (args.config) {
+    try {
+      const configRaw = await fs.readFile(args.config, "utf8");
+      projectConfig = JSON.parse(configRaw);
+    } catch (e) {
+      console.warn(`⚠️  Warning: Could not read config file: ${e.message}`);
+    }
+  }
+
+  // Determine lipsync mode
+  const useLipsync = args.lipsync || (projectConfig?.avatar?.consent === true);
+  let avatarConfig = null;
+
+  if (useLipsync) {
+    if (projectConfig?.avatar) {
+      avatarConfig = projectConfig.avatar;
+    }
+
+    if (!avatarConfig || !avatarConfig.path) {
+      console.error("❌ Error: --lipsync requires avatar configuration in config.json");
+      console.error("   Use project:create with --avatar option, or provide --config pointing to a config.json with avatar settings");
+      process.exit(1);
+    }
+
+    if (!avatarConfig.consent) {
+      console.warn(`
+⚠️  Warning: Avatar consent not confirmed
+   Lipsync video will be generated, but please ensure you have proper consent
+   before publishing. See docs/safety-consent.md for details.
+`);
+    }
+  }
 
   // Build render.json
   const render = {
@@ -79,7 +127,24 @@ async function main() {
       fps: 30,
     },
     segments: [],
+    assets: [],
   };
+
+  // Add avatar asset if lipsync enabled
+  if (useLipsync && avatarConfig) {
+    render.assets.push({
+      id: avatarConfig.asset_id || "avatar_face",
+      type: "image",
+      uri: avatarConfig.path,
+      meta: {
+        consent: avatarConfig.consent || false,
+        consent_type: avatarConfig.consent_type || null,
+        consent_date: avatarConfig.consent_date || null,
+        consent_scope: ["lipsync"],
+      },
+    });
+    console.log(`🎭 Lipsync mode enabled with avatar: ${avatarConfig.path}`);
+  }
 
   for (const seg of structure.segments) {
     const script = narrationSegments[seg.id] || "";
@@ -87,17 +152,31 @@ async function main() {
       console.warn(`⚠️  Warning: No narration found for segment ${seg.id}`);
     }
 
-    render.segments.push({
+    const segment = {
       id: seg.id,
       duration_ms: seg.end_ms - seg.start_ms,
-      video: {
-        mode: "reuse_original",
-      },
+      video: useLipsync
+        ? {
+            mode: "lipsync",
+            lipsync: {
+              face_asset_id: avatarConfig?.asset_id || "avatar_face",
+              provider: args.lipsyncProvider,
+              watermark: {
+                enabled: true,
+                text: "AI Generated",
+              },
+            },
+          }
+        : {
+            mode: "reuse_original",
+          },
       audio: {
         mode: "tts",
         script: script,
       },
-    });
+    };
+
+    render.segments.push(segment);
   }
 
   // Write output

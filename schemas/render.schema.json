@@ -97,7 +97,25 @@
             "pattern": "^[a-fA-F0-9]{64}$"
           },
           "meta": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+              "consent": {
+                "type": "boolean",
+                "description": "Whether explicit consent was given for this asset (required for lipsync face assets)"
+              },
+              "consent_scope": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["lipsync", "voice_conversion", "general"]
+                },
+                "description": "Specific use cases consent was given for"
+              },
+              "source": {
+                "type": "string",
+                "description": "Source of the asset (e.g., 'self', 'stock', 'licensed')"
+              }
+            }
           }
         }
       }
@@ -200,8 +218,44 @@
                 "enum": [
                   "reuse_original",
                   "generate",
-                  "static_image"
+                  "static_image",
+                  "lipsync"
                 ]
+              },
+              "lipsync": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Lipsync configuration (required when mode=lipsync)",
+                "properties": {
+                  "face_asset_id": {
+                    "type": "string",
+                    "description": "Asset ID of the face image to animate"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "Lipsync provider name (default: from config/env)"
+                  },
+                  "crop": {
+                    "type": "string",
+                    "enum": ["center", "fit", "fill"],
+                    "default": "center"
+                  },
+                  "watermark": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "text": {
+                        "type": "string",
+                        "default": "AI Generated"
+                      }
+                    }
+                  }
+                },
+                "required": ["face_asset_id"]
               },
               "source": {
                 "type": "object",
@@ -253,6 +307,14 @@
                     }
                   },
                   "required": ["source"]
+                }
+              },
+              {
+                "if": {
+                  "properties": { "mode": { "const": "lipsync" } }
+                },
+                "then": {
+                  "required": ["lipsync"]
                 }
               }
             ]

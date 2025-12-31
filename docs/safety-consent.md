@@ -58,6 +58,71 @@
 | `written` | 書面による許諾あり |
 | `verbal` | 口頭での許諾あり（要記録） |
 
+### consent_scope の指定（オプション）
+
+特定の用途に対する許諾を明示的に記録できます：
+
+```json
+{
+  "id": "avatar_face",
+  "type": "image",
+  "uri": "assets/avatar.png",
+  "meta": {
+    "consent": true,
+    "consent_scope": ["lipsync", "general"]
+  }
+}
+```
+
+| スコープ | 意味 |
+|---------|------|
+| `lipsync` | リップシンク動画生成に使用可能 |
+| `voice_conversion` | 音声変換に使用可能 |
+| `general` | 一般的な用途に使用可能 |
+
+## 2.5. Lipsync 特有の要件
+
+### 顔画像アセットの consent 必須
+
+`video.mode="lipsync"` を使用する場合、`face_asset_id` で参照されるアセットには **必ず** `meta.consent=true` が必要です。
+
+```json
+{
+  "segments": [
+    {
+      "id": "s01",
+      "video": {
+        "mode": "lipsync",
+        "lipsync": {
+          "face_asset_id": "avatar_face"
+        }
+      }
+    }
+  ],
+  "assets": [
+    {
+      "id": "avatar_face",
+      "type": "image",
+      "uri": "assets/avatar.png",
+      "meta": {
+        "consent": true,
+        "consent_scope": ["lipsync"]
+      }
+    }
+  ]
+}
+```
+
+### watermark による生成物の識別
+
+デフォルトで lipsync 生成動画には「AI Generated」の透かしが入ります。これにより：
+
+- ディープフェイクとの区別が可能
+- 視聴者への透明性確保
+- 悪用の抑止
+
+透かしを無効にする場合は、運用ポリシーで別途管理が必要です。
+
 ## 3. バリデーション
 
 ### validate:policy コマンド

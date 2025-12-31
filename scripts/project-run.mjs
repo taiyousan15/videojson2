@@ -101,6 +101,35 @@ function getVideoDuration(videoPath) {
   }
 }
 
+// materialized render.json から lipsync 情報を抽出
+function extractLipsyncInfo(projectDir) {
+  const possiblePaths = [
+    path.join(projectDir, 'work', 'render.materialized.json'),
+    path.join(projectDir, '.tmp', 'render.materialized.json'),
+    path.join(projectDir, 'render.materialized.json'),
+  ];
+
+  for (const renderPath of possiblePaths) {
+    if (fs.existsSync(renderPath)) {
+      try {
+        const render = JSON.parse(fs.readFileSync(renderPath, 'utf8'));
+        if (render._lipsync?.used) {
+          return {
+            enabled: true,
+            provider: render._lipsync.provider || 'unknown',
+            segments: render._lipsync.segments || [],
+            face_assets: render._lipsync.face_asset_ids || [],
+          };
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }
+
+  return null;
+}
+
 // manifest.json を生成
 function generateManifest(options) {
   const {
@@ -114,6 +143,8 @@ function generateManifest(options) {
     success,
     error,
   } = options;
+
+  const lipsyncInfo = extractLipsyncInfo(projectDir);
 
   const manifest = {
     schema_version: '1.0',
@@ -134,6 +165,7 @@ function generateManifest(options) {
       size_bytes: fs.existsSync(outputPath) ? fs.statSync(outputPath).size : null,
       duration_seconds: fs.existsSync(outputPath) ? getVideoDuration(outputPath) : null,
     } : null,
+    lipsync: lipsyncInfo,
     error: error || null,
     environment: {
       node_version: process.version,
