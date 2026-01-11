@@ -71,15 +71,15 @@ def generate_remotion_segment(section, image_path: Path, audio_path: Path,
     narration = section.get('narration', '')
     display_text = convert_reading_to_display(narration)
 
-    # Remotion用のVideoSegmentデータを作成
+    # Remotion用のVideoSegmentデータを作成 (staticFileから参照)
     segment_data = {
         "segments": [
             {
                 "id": f"scene_{section['scene_number']}",
                 "startFrame": 0,
                 "durationInFrames": duration_frames,
-                "backgroundImage": str(image_path.absolute()),
-                "audioSrc": str(audio_path.absolute()),
+                "backgroundImage": f"temp/scene_{section['scene_number']}.png",
+                "audioSrc": f"temp/scene_{section['scene_number']}.mp3",
                 "telop": {
                     "text": display_text,
                     "style": "lecture",
@@ -97,7 +97,7 @@ def generate_remotion_segment(section, image_path: Path, audio_path: Path,
     cmd = [
         'npx', 'remotion', 'render',
         'TelopVideo',
-        str(output_path),
+        str(output_path.absolute()),
         '--props', props_json,
         '--overwrite'
     ]
@@ -140,6 +140,19 @@ def main():
         print(f"❌ Error: Remotionプロジェクトが見つかりません: {remotion_dir}")
         print(f"以下のディレクトリに remotion-telop プロジェクトが必要です")
         return
+
+    # 画像と音声をRemotion public/tempにコピー
+    import shutil
+    remotion_temp = remotion_dir / "public" / "temp"
+    remotion_temp.mkdir(exist_ok=True, parents=True)
+
+    print(f"=== ファイルコピー ===")
+    print(f"画像と音声をRemotion public/tempにコピー中...")
+    for img_file in images_dir.glob("scene_*.png"):
+        shutil.copy(img_file, remotion_temp / img_file.name)
+    for audio_file in audio_dir.glob("scene_*.mp3"):
+        shutil.copy(audio_file, remotion_temp / audio_file.name)
+    print(f"✓ コピー完了\\n")
 
     # 各セグメントのテロップ動画を生成
     print(f"=== Remotionセグメント動画生成 ({len(sections)}個) ===\n")
