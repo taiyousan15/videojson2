@@ -34,13 +34,13 @@ def generate_nanobanana_image(section, output_path: Path, gemini_skill_dir: Path
 
     # プロンプト構築（背景のみ、テキストなし）
     prompt = f"""
-A modern, professional background image for a presentation slide.
+A modern, professional background image for a presentation slide in 1920x1080 resolution.
 Theme: {narration[:100]}
-Style: Clean, minimal, tech-focused
+Style: Clean, minimal, tech-focused, professional presentation background
 Colors: Blue tones (#0066FF, #00D9FF), modern gradients
-Layout: 1920x1080, suitable as background
+Layout: Landscape 1920x1080 (16:9 aspect ratio), suitable as background
 Important: NO text, NO words, NO numbers on the image
-Focus on visual background only
+Focus on visual background only, abstract modern design
 """
 
     print(f"  Prompt: {prompt[:80]}...")
@@ -50,9 +50,7 @@ Focus on visual background only
         'python3',
         str(gemini_skill_dir / 'scripts' / 'image_generator.py'),
         '--prompt', prompt,
-        '--output', str(output_path),
-        '--width', '1920',
-        '--height', '1080'
+        '--output', str(output_path)
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
