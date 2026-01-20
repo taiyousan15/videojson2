@@ -38,6 +38,7 @@
     "analyze:transcript": "node scripts/analyze-transcript.mjs",
     "analyze:youtube": "node scripts/analyze-youtube.mjs",
     "analyze:video": "node scripts/analyze-video.mjs",
+    "analyze:reference": "node scripts/analyze-reference-asset.mjs",
     "transcript:convert": "node scripts/convert-subtitles-to-transcript.mjs",
     "project:init": "node scripts/project-init.mjs",
     "preview:html": "node scripts/preview-html.mjs",
@@ -46,7 +47,15 @@
     "project:create": "node scripts/project-create.mjs",
     "project:variants": "node scripts/project-variants.mjs",
     "doctor": "node scripts/doctor.mjs",
-    "test:lipsync": "node tests/lipsync-e2e.mjs"
+    "workflow:lint": "node .claude/hooks/workflow-lint.cjs",
+    "skill:lint": "node .claude/hooks/workflow-lint.cjs --skill",
+    "mcp:list": "node .claude/hooks/mcp-add.cjs --list",
+    "mcp:add": "node .claude/hooks/mcp-add.cjs",
+    "test:guards": "vitest run tests/taisun-guards.test.ts",
+    "guard:verify": "npm run workflow:lint && npm run skill:lint && npm run test:guards",
+    "test:lipsync": "node tests/lipsync-e2e.mjs",
+    "jp-slide:create": "npx ts-node worker/src/cli/jp-slide-training.ts",
+    "jp-slide:help": "npx ts-node worker/src/cli/jp-slide-training.ts --help"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

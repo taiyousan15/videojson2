@@ -1,0 +1,792 @@
+version: 1
+
+kind: "taisun_master_guard_spec_ja"
+
+
+
+target:
+
+  portability: true
+
+  primary_repo_example: "taiyousan15/taisun_agent"
+
+  works_for:
+
+    - "Claude Code hooks + state + workflow/policy を持つ任意のリポジトリ"
+
+  locale:
+
+    default: "ja"
+
+    env_var: "TAISUN_LOCALE"
+
+
+
+premise:
+
+  - "workflow / policy / Hook / state は導入済み"
+
+  - "技術的ガード中心では論理違反（Stepスキップ/入力すり替え/既存無視/契約無視）が止まり切っていない"
+
+  - "最重要の強制は repo 内 Hook/state/validation で行う（外部依存でガードしない）"
+
+  - "MCP Market は下層(補助)として deferred loading でのみ使う（常駐禁止）"
+
+  - "このファイルが唯一の正（Single Source of Truth）。分岐した仕様書を作らない"
+
+
+
+principles:
+
+  - "既存設計を壊さない（差分最小、Phase 0 で実在パスに完全フィット、決め打ち禁止）"
+
+  - "AIを信用しない：State + Permission + Validation で『できない』にする"
+
+  - "Intent Contract First を最優先で必須化（契約が無ければ危険操作を禁止）"
+
+  - "決定的分析（deterministic analyzer）を必須化（捏造しづらい証跡＝sha256/寸法/メタ/フレームhash等）"
+
+  - "論理違反は証跡(Evidence)が無い限り次に進めない（Step/Phase遷移ゲート）"
+
+  - "逸脱は承認制（deviation approval）。承認なし逸脱は常にblock"
+
+  - "大出力は memory_add へ退避。Issue/Runlog は要約 + refId のみ"
+
+  - "lint と runtime の判定ロジックは single source of truth（shared_validator）"
+
+  - "warnではなくblockが基本（安全側）"
+
+  - "コピー混入/文字化け(U+FFFD)/全角空白(U+3000)は事故要因。実行前にブロック"
+
+
+
+goals:
+
+  - "ユーザー意図と実行内容の乖離を構造的に潰す（意図=契約、契約違反は実行不能化）"
+
+  - "スキル実行時の Step スキップを物理的に不可能にする"
+
+  - "参考画像/入力のすり替えを物理的に不可能にする"
+
+  - "既存資産があるのに勝手に新規作成する逸脱を止める"
+
+  - "動画生成だけでなく全スキル/全プロジェクトに汎用拡張可能な基盤にする"
+
+  - "ガードが『設計だけで存在』する状態を終わらせ、Hook/state/CIで実際に止まる状態へ"
+
+
+
+human_operator_steps:
+
+  single_file_policy:
+
+    - "このファイルは1本に統合する（複数YAMLを並べない）"
+
+    - "変更は必ずgitコミットし、レビュー可能にする"
+
+  how_to_use_with_claude_code:
+
+    - "Claude Code セッション開始時に本ファイルを Read させる"
+
+    - "実装は Phase 0 discovery から順番に行う（決め打ち禁止）"
+
+    - "大出力ログは会話に貼らず memory_add を使う"
+
+
+
+system_design:
+
+  enforcement_style:
+
+    - "blockが基本"
+
+    - "block時は『次にやる最小手順』を日本語で短く提示"
+
+    - "例外は『承認レコード』が state にある場合のみ許可（期限/スコープ付き）"
+
+
+
+  layers_priority_order_must_implement:
+
+    - id: "intent_contract_first"
+
+      summary: "意図/制約/入力/成功条件を artifacts/intent_contract.yaml に固定し、契約が無いと危険操作を禁止"
+
+    - id: "deterministic_reference_analyzer"
+
+      summary: "参考入力を決定的に解析し、sha256/寸法/メタ/フレームhash等を artifacts/reference_analysis.json に残す"
+
+    - id: "read_before_create_with_decision"
+
+      summary: "新規作成前に探索+既存Read+再利用or新規の意思決定(理由付き)を必須化"
+
+    - id: "evidence_auto_capture_ledger"
+
+      summary: "HooksでRead/Search/Write/Edit/Bash/Toolから証跡を自動採取しstateに保存（自己申告依存を排除）"
+
+    - id: "skill_step_transition_gate"
+
+      summary: "Step遷移は gate API でのみ可能。requiredEvidence未達は遷移不可"
+
+    - id: "reference_provenance_guard"
+
+      summary: "登録+sha256固定+使用証明で入力すり替えをblock"
+
+    - id: "phase_transition_gate"
+
+      summary: "workflow Phase遷移もゲート化（DoD未達は進めない）"
+
+    - id: "definition_lint_hard_gate"
+
+      summary: "workflow/policy/skill workflow 定義LintをStart/Resume/Strict/CI/Doctorで強制"
+
+    - id: "large_output_sink"
+
+      summary: "大出力は memory_add へ退避（Issue/Runlogは要約+refId）"
+
+    - id: "dynamic_red_teaming_optional"
+
+      summary: "コアが安定してから継続運用の免疫システム化（任意）"
+
+    - id: "structured_memory_optional"
+
+      summary: "過去失敗と対策を検索しやすくする（任意）"
+
+
+
+runtime_contract:
+
+  state_is_source_of_truth:
+
+    - "activeSkillId / activeSkillStepId / activePhaseId は state の唯一の真実"
+
+  forbid_self_report_transitions:
+
+    - "AIの自己申告で Step/Phase を進めることは禁止"
+
+    - "遷移は gate 関数（skill.step.complete / workflow.phase.complete 等）を通した時のみ"
+
+  strict_block_on_missing_definitions:
+
+    - "activeSkillIdがあるのにskill workflow定義が無い場合は strict では必ずblock"
+
+
+
+artifacts_and_state:
+
+  state_store:
+
+    requirement: "既存 workflow-state-manager に統合（新規stateファイル乱立禁止）"
+
+    new_state_keys_minimum:
+
+      - "activeWorkflowId"
+
+      - "activePhaseId"
+
+      - "activeSkillId"
+
+      - "activeSkillStepId"
+
+      - "intentContractRef"
+
+      - "skillEvidence[]"
+
+      - "skillEvidenceIndexByStepId{}"
+
+      - "registeredInputs.referenceAssets[]"
+
+      - "locks.referenceAssets[]"
+
+      - "decisions.assetReuse[]"
+
+      - "approvals.deviations[]"
+
+      - "validations.lastResults[]"
+
+
+
+  evidence_types:
+
+    - "read:file"
+
+    - "search:repo"
+
+    - "artifact:file_created_or_updated"
+
+    - "hash:sha256_of_reference_asset"
+
+    - "validation:command_passed"
+
+    - "approval:deviation_granted"
+
+    - "decision:reuse_or_create"
+
+    - "contract:intent_contract_signed"
+
+
+
+  evidence_auto_capture:
+
+    on_read:
+
+      record_as: "read:file"
+
+      fields: ["path", "timestamp"]
+
+    on_search:
+
+      record_as: "search:repo"
+
+      fields: ["pattern", "path_scope", "timestamp"]
+
+    on_write_or_edit:
+
+      record_as: "artifact:file_created_or_updated"
+
+      fields: ["path", "is_new_file", "timestamp"]
+
+    on_bash:
+
+      record_as_if_success: "validation:command_passed"
+
+      fields: ["command", "exit_code", "timestamp"]
+
+    on_tool:
+
+      record_as: "artifact:tool_output_ref"
+
+      fields: ["tool_name", "refId_optional", "timestamp"]
+
+
+
+intent_contract_first:
+
+  artifact_path: "artifacts/intent_contract.yaml"
+
+  required_fields:
+
+    - "objective"
+
+    - "non_goals"
+
+    - "inputs"
+
+    - "constraints"
+
+    - "definition_of_done"
+
+    - "allowed_deviations_policy"
+
+  gate_rule:
+
+    - "intent_contract.yaml が存在し required_fields を満たすまで、Bash/Write/Edit/Tool を block（Read/Searchのみ許可）"
+
+  block_message_ja: |-
+
+    【安全停止】Intent Contract が未確定です（意図乖離防止のため停止）。
+
+    次にやること:
+
+    1) artifacts/intent_contract.yaml を作成/更新
+
+    2) objective / inputs / constraints / definition_of_done を確定
+
+    3) それから再実行してください
+
+
+
+deterministic_reference_analyzer:
+
+  output_artifact: "artifacts/reference_analysis.json"
+
+  must_include:
+
+    - "asset_id"
+
+    - "type"
+
+    - "sha256"
+
+    - "metadata"
+
+    - "derived_features"
+
+    - "timestamp"
+
+  type_values: ["image", "video", "file", "url"]
+
+  derived_features_minimum:
+
+    image: ["width", "height", "format"]
+
+    video: ["duration_sec", "fps", "frame_hashes_sampled"]
+
+  gate_rule:
+
+    - "referenceAssets があるタスクは reference_analysis.json が無い限り生成工程へ進めない"
+
+  block_message_ja: |-
+
+    【安全停止】参考入力の決定的分析（deterministic analyzer）が未実行です。
+
+    次にやること:
+
+    1) 参考入力を登録
+
+    2) artifacts/reference_analysis.json を生成（sha256/寸法/特徴量）
+
+    3) それから生成工程へ進んでください
+
+
+
+read_before_create_with_decision:
+
+  applies_to_new_files_like:
+
+    - "phase*.py"
+
+    - "create_*.py"
+
+    - "templates/*.json"
+
+    - "scripts/**"
+
+    - "render/**"
+
+  required_evidence_before_create:
+
+    - "search:repo"
+
+    - "read:file"
+
+    - "decision:reuse_or_create"
+
+  decision_record_format:
+
+    record_to_state: true
+
+    required_fields: ["target_path", "found_candidates", "decision", "reason", "timestamp"]
+
+  block_message_ja: |-
+
+    【安全停止】新規作成の前に探索/既存Read/意思決定が必要です（既存無視逸脱防止）。
+
+    次にやること:
+
+    1) repo内探索（search evidence）
+
+    2) 既存候補をRead（read evidence）
+
+    3) 再利用 or 新規（理由付き）を decision として記録
+
+    4) それから新規作成してください
+
+
+
+skill_workflow_definition_format:
+
+  location_policy:
+
+    preferred:
+
+      - ".claude/skills/<skillId>/workflow.yaml"
+
+    fallback:
+
+      - "config/skills/workflows/<skillId>.yaml"
+
+  schema_minimum:
+
+    - "id: string"
+
+    - "version: number"
+
+    - "steps: array (non-empty)"
+
+    - "steps[].id: string"
+
+    - "steps[].requiredEvidence: array (min 1)"
+
+    - "steps[].allowedTools: array"
+
+    - "steps[].requiredValidations: array"
+
+    - "steps[].requiredInputs: array (optional)"
+
+  strict_rules:
+
+    - "全stepは requiredEvidence を1つ以上持つ（スキップ余地を消す）"
+
+    - "最終stepは validation:all_previous_steps_passed 相当を requiredEvidence に含める"
+
+
+
+skill_step_transition_gate:
+
+  gate_api_name_hints: ["skill.step.complete", "skill_step_complete"]
+
+  rule:
+
+    - "requiredEvidence と requiredValidations を満たした時だけ state.activeSkillStepId を更新"
+
+    - "満たしていない場合は fail を返し、次工程のツール実行も block のまま"
+
+  block_message_ja: |-
+
+    【安全停止】Step完了条件が未達です（Stepスキップ防止）。
+
+    requiredEvidence / requiredValidations を満たしてから skill.step.complete を再実行してください
+
+
+
+reference_provenance_guard:
+
+  registration:
+
+    - "ユーザー入力から referenceAssets を登録（パス/URL/添付識別子）"
+
+    - "登録時に sha256 を計算し state.locks.referenceAssets に固定"
+
+  enforcement:
+
+    - "reference_analysis.json の sha256 と locks.referenceAssets の一致を必須化"
+
+    - "生成工程で参照が lock と一致しない場合 block（例外は逸脱承認が必要）"
+
+  block_message_ja: |-
+
+    【安全停止】参考入力のすり替えを検知しました（sha256不一致）。
+
+    対応:
+
+    1) ユーザー提供の参考入力を登録し直し
+
+    2) reference_analysis.json で sha256 を確定
+
+    3) 一致を確認してから進んでください
+
+    例外は逸脱承認が必要です
+
+
+
+definition_lint_alignment:
+
+  single_source_of_truth: "shared_validator"
+
+  required_commands:
+
+    - "npm run workflow:lint"
+
+    - "npm run skill:lint"
+
+  hard_gate:
+
+    - "lint fail なら start/resume/strict を block"
+
+    - "doctor と CI でも同じ lint を回す"
+
+
+
+large_output_sink:
+
+  threshold:
+
+    chars: 6000
+
+    lines: 120
+
+  action: "memory_add"
+
+  issue_posting_rule:
+
+    - "Issue/Runlog は要約+refIdのみ"
+
+    - "全文ログ/巨大diffは貼らない"
+
+
+
+mcp_market_underlay:
+
+  selection_policy:
+
+    - "ガードはrepo内完結（MCPは補助）"
+
+    - "curated allowlist のみ採用、原則 disabled"
+
+    - "追加は /mcp-add + 人間承認 + 権限最小化"
+
+    - "常駐ロード禁止（deferred loading）"
+
+  integration_rules:
+
+    - ".mcp.json は proxy-only を維持"
+
+    - ".mcp.full.json にカタログ追加（disabled）"
+
+    - "Proxy MCP の triggers / deferred loading に従い必要時のみロード"
+
+  curated_candidates:
+
+    - id: "memory-server"
+
+      default: "disabled"
+
+      role: "証跡/要約/ノウハウの検索性向上（再発低減）"
+
+      constraints:
+
+        - "writeは要約のみ（大出力禁止）"
+
+        - "tagsに issueId/skillId/phaseId を必須"
+
+    - id: "mcp-server-configuration-manager"
+
+      default: "disabled"
+
+      role: "MCP設定の追加/削除/検証の自動化（設定事故低減）"
+
+      constraints:
+
+        - ".mcp.json は proxy-only 最小を維持"
+
+        - "追加は disabled で入り、トリガー定義後に有効化"
+
+    - id: "openspec"
+
+      default: "disabled"
+
+      role: "仕様駆動（DoD/契約/変更追跡）の強化"
+
+      constraints:
+
+        - "spec更新はPR差分に残す"
+
+        - "spec変更は承認が必要"
+
+
+
+hook_integration_min_diff_patch_plan:
+
+  objective: "既存hook（例: skill-usage-guard / deviation approval / workflow fidelity）へ最小差分で差し込む"
+
+  required_discovery_first:
+
+    - "hook登録順序（PreToolUseの実行順）を必ず特定してから編集する"
+
+    - "stateの保存/ロード実装（workflow-state-manager相当）を必ずReadしてから追加する"
+
+    - "shared_validator（lint/runtime共通）の既存実装があればそこに合流し二重実装しない"
+
+  pretooluse_order_recommended:
+
+    - "copy_safety_guard"
+
+    - "definition_lint_hard_gate"
+
+    - "intent_contract_first_gate"
+
+    - "skill_resolution_guard"
+
+    - "reference_provenance_guard"
+
+    - "read_before_create_with_decision_guard"
+
+    - "skill_workflow_enforcement_guard (Step gate + allowedTools)"
+
+    - "deviation_approval_guard (最後に例外許可)"
+
+  where_to_add_logic_hints:
+
+    - "skill-usage-guard: skillId解決（パス指定/このスキルで含む）+ activeSkillセット + 必須SKILL.md Read証跡"
+
+    - "workflow-fidelity-guard: 契約/証跡/定義の前提チェックを合流"
+
+    - "deviation-approval-guard: approvals.deviations のスコープ/期限/対象操作を厳格化"
+
+    - "workflow-state-manager: intentContractRef / evidence ledger / locks / decisions の保存を追加"
+
+    - "shared_validator: workflow/policy/skill workflow の validate を集約（lint/runtime共通）"
+
+
+
+implementation_playbook:
+
+  branch:
+
+    name: "feat/intent-contract-deterministic-analyzer-evidence-stepgate-provenance"
+
+    create_from: "main"
+
+
+
+  phase_00_discovery:
+
+    purpose: "実在パス/既存関数名/Hook登録順序/state保存先/shared validatorの有無を確定（決め打ち禁止）"
+
+    bash:
+
+      - "git checkout main"
+
+      - "git pull --ff-only"
+
+      - "git checkout -b feat/intent-contract-deterministic-analyzer-evidence-stepgate-provenance"
+
+      - "git ls-files | rg -n '^\\.claude/hooks/.*\\.(js|ts)$' || true"
+
+      - "rg -n 'PreToolUse|PostToolUse|hook' .claude/hooks .claude || true"
+
+      - "rg -n 'state|workflow-state|state-manager|loadState|saveState' .claude src scripts config || true"
+
+      - "rg -n 'workflow:lint|skill:lint|validator|schema|zod' .claude src scripts config || true"
+
+
+
+  phase_01_intent_contract_first:
+
+    purpose: "最優先：意図乖離を契約で潰す（契約未確定は危険操作禁止）"
+
+    tasks:
+
+      - "artifacts/intent_contract.yaml を必須成果物にする"
+
+      - "PreToolUseで契約未達なら Bash/Write/Edit/Tool を block（Read/Searchのみ許可）"
+
+      - "契約テンプレを docs/intent_contract_template.yaml として追加（任意）"
+
+
+
+  phase_02_deterministic_reference_analyzer:
+
+    purpose: ""分析したことにする" を不可能化（sha256/寸法/フレームhash等の証跡）"
+
+    tasks:
+
+      - "scripts/analyze_reference_asset.(ts|js|py) を追加（既存流儀に合わせる）"
+
+      - "artifacts/reference_analysis.json を生成し、state.locks.referenceAssets と一致させる"
+
+      - "生成工程は reference_analysis.json が無い限り block"
+
+
+
+  phase_03_evidence_auto_capture_ledger:
+
+    purpose: "自己申告依存を排除（Hookイベントから証跡を自動採取）"
+
+    tasks:
+
+      - "Read/Search/Write/Edit/Bash/Tool のイベントから state.skillEvidence を自動記録"
+
+      - "skillEvidenceIndexByStepId を更新し requiredEvidence 判定を高速化"
+
+      - "大出力は memory_add へ退避し refId だけ記録"
+
+
+
+  phase_04_skill_step_transition_gate:
+
+    purpose: "Step遷移をゲート化（requiredEvidence未達は進めない）"
+
+    tasks:
+
+      - "skill.step.complete を実装（または既存に合流）"
+
+      - "Step完了条件は shared_validator と同じ判定を使う"
+
+      - "PreToolUseで『現在Stepで許可されない操作』を block"
+
+
+
+  phase_05_reference_provenance_guard:
+
+    purpose: "参考入力すり替え防止（登録+sha256固定+使用証明）"
+
+    tasks:
+
+      - "referenceAssets 登録時の sha256 を固定"
+
+      - "reference_analysis.json 内 sha256 と lock を照合"
+
+      - "不一致は block（例外は逸脱承認）"
+
+
+
+  phase_06_read_before_create_with_decision:
+
+    purpose: "既存無視の新規作成を止める（探索+Read+意思決定）"
+
+    tasks:
+
+      - "新規ファイル作成(Write/Edit)を検知"
+
+      - "探索/Read/decision evidence が無ければ block"
+
+      - "decision:reuse_or_create を state に記録"
+
+
+
+  phase_07_definition_lint_hard_gate_alignment:
+
+    purpose: "誤定義でガード無効化を根絶（lint + start/resume/strict/CI/doctor）"
+
+    tasks:
+
+      - "npm run workflow:lint / skill:lint を整備"
+
+      - "lint fail なら start/resume/strict を block"
+
+      - "shared_validator を単一ソース化"
+
+
+
+  phase_08_mcp_market_underlay_deferred:
+
+    purpose: "MCP Market を下層に（常駐禁止・disabled・必要時のみ）"
+
+    tasks:
+
+      - "curated allowlist を config に追加（disabled）"
+
+      - ".mcp.json は proxy-only 最小維持、拡張は .mcp.full.json へ"
+
+      - "/mcp-add + 人間承認 でのみ有効化"
+
+
+
+  phase_09_tests_and_ci:
+
+    purpose: "論理違反が止まることをテストとCIで固定"
+
+    minimum_tests:
+
+      - "契約なしで危険操作が block される"
+
+      - "reference_analysis 未生成で生成工程が block される"
+
+      - "sha256不一致で block される"
+
+      - "探索/Read/decision無しの新規作成が block される"
+
+      - "requiredEvidence未達で step complete が fail する"
+
+      - "lint fail で start/resume/strict が block される"
+
+
+
+acceptance_criteria:
+
+  - "Intent Contract 未確定では危険操作ができない"
+
+  - "deterministic analyzer の証跡なしに生成工程へ進めない"
+
+  - "Stepスキップは Hook + Step遷移ゲートで不可能"
+
+  - "参考入力すり替えは sha256 固定で不可能（例外は承認必須）"
+
+  - "既存無視の新規作成は探索+Read+decision無しでは不可能"
+
+  - "lint fail なら start/resume/strict は不可能"
+
+  - "MCP Market は下層だが常駐せず、明示操作と承認がない限り有効化されない"
+
