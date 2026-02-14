@@ -21,7 +21,6 @@ export class PaddleOcrClient {
   }
 
   private async processFrame(framePath: string, frameIndex: number): Promise<OcrResult[]> {
-    // TODO: Call PaddleOCR service
     const response = await fetch(`${this.endpoint}/ocr`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
