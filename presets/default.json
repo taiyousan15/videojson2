@@ -1,0 +1,26 @@
+{
+  "name": "default",
+  "description": "標準設定（1920x1080 横長、30fps）",
+  "render": {
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    },
+    "fps": 30,
+    "audio": {
+      "mode": "tts",
+      "provider": "dummy"
+    },
+    "captions": {
+      "enabled": true,
+      "style": "bottom-center",
+      "font_size": 48,
+      "font_color": "#FFFFFF",
+      "background": "rgba(0,0,0,0.7)"
+    }
+  },
+  "segments": {
+    "intro_duration_ms": 5000,
+    "outro_duration_ms": 5000
+  }
+}

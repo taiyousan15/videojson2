@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-12-31T00:00:00Z",
+  "render_mode": "hybrid",
+  "output": {
+    "format": "mp4",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "segments": [
+    {
+      "id": "s01",
+      "duration_ms": 8000,
+      "video": {
+        "mode": "reuse_original"
+      },
+      "audio": {
+        "mode": "tts",
+        "script": "今日は「AIシステム開発の未来」について、短く3つにまとめて話します。"
+      }
+    },
+    {
+      "id": "s02",
+      "duration_ms": 52000,
+      "video": {
+        "mode": "reuse_original"
+      },
+      "audio": {
+        "mode": "tts",
+        "script": "ポイントは3つです。1つ目は自動化。2つ目はAIエージェント。3つ目は検証と安全性です。"
+      }
+    }
+  ]
+}

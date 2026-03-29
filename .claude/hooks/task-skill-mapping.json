@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "タスク種別→スキル自動マッピング設定（TAISUN強制ゲート）",
+  "version": "1.0.0",
+  "mappings": [
+    {
+      "task_patterns": [
+        "YouTube.*動画",
+        "youtube.*video",
+        "スライド動画",
+        "教材動画",
+        "研修動画",
+        "動画生成",
+        "動画作成",
+        "video generation"
+      ],
+      "required_skill": "youtubeschool-creator",
+      "skill_path": ".claude/skills/youtubeschool-creator/SKILL.md",
+      "blocking": true,
+      "error_message": "YouTubeスライド動画生成には youtubeschool-creator スキルが必須です。"
+    },
+    {
+      "task_patterns": [
+        "画像生成",
+        "image generation",
+        "NanoBanana",
+        "背景画像"
+      ],
+      "required_rules": [
+        ".claude/NANOBANANA_IMAGE_TO_IMAGE_RULES.md"
+      ],
+      "blocking": true,
+      "error_message": "画像生成には NANOBANANA_IMAGE_TO_IMAGE_RULES.md のルールに従う必要があります。"
+    },
+    {
+      "task_patterns": [
+        "structure\\.json",
+        "Event JSON",
+        "構造化"
+      ],
+      "required_skill": "videojson_pipeline",
+      "skill_path": ".claude/skills/videojson_pipeline/SKILL.md",
+      "blocking": false
+    }
+  ],
+  "forbidden_tools": [
+    {
+      "tool_pattern": "PIL|Pillow",
+      "reason": "PIL/Pillowは禁止されています。NanoBanana + Remotionを使用してください。"
+    },
+    {
+      "tool_pattern": "FAL.*API|fal\\.ai",
+      "reason": "FAL APIは禁止されています。NanoBanana Proを使用してください。"
+    }
+  ],
+  "workflow_phases": {
+    "youtube_video": [
+      "Phase 0: ダウンロード・文字起こし",
+      "Phase 1: セクション分割",
+      "Phase 2: 翻訳・要約",
+      "Phase 3: フレーム分析",
+      "Phase 4: NanoBanana画像生成（I2I必須）",
+      "Phase 5: 品質検証（スキップ禁止）",
+      "Phase 6: TTS音声生成",
+      "Phase 7: Remotionテロップ（スキップ禁止）"
+    ],
+    "mandatory_phases": [5, 7]
+  }
+}

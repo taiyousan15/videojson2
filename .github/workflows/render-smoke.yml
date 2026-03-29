@@ -1,0 +1,65 @@
+name: render-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep_artifacts:
+        description: 'Keep rendered video as artifact'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Verify FFmpeg
+        run: ffmpeg -version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bootstrap smoke assets
+        run: npm run render:bootstrap
+
+      - name: Validate smoke examples
+        run: |
+          node scripts/validate-json.mjs schemas/render.schema.json examples/smoke/render.json
+          node scripts/validate-json.mjs schemas/structure.schema.json examples/smoke/structure.json
+
+      - name: Materialize render
+        run: npm run render:materialize -- --render examples/smoke/render.json
+
+      - name: Render with FFmpeg
+        run: npm run render:ffmpeg -- --render examples/smoke/render.materialized.json --output examples/smoke/output.mp4
+
+      - name: Verify output
+        run: |
+          ls -la examples/smoke/
+          ffprobe -v error -show_format -show_streams examples/smoke/output.mp4
+
+      - name: Upload artifact
+        if: ${{ github.event.inputs.keep_artifacts == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-output
+          path: examples/smoke/output.mp4
+          retention-days: 7

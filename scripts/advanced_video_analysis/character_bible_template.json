@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "character_bible_template.json",
+  "title": "Character Bible Template",
+  "description": "NanoBanana生成時のキャラクター一貫性を保証するためのテンプレート",
+  "version": "1.0.0",
+
+  "character_id": "presenter_01",
+  "description": "メインプレゼンター",
+
+  "appearance": {
+    "age_range": "35-45",
+    "gender_expression": "male",
+    "ethnicity": "asian",
+    "build": "average",
+    "height_impression": "average",
+
+    "hair": {
+      "style": "short",
+      "color": "black",
+      "texture": "straight",
+      "parting": "side",
+      "notes": ""
+    },
+
+    "face": {
+      "shape": "oval",
+      "skin_tone": "medium",
+      "features": "clean-shaven",
+      "eyebrows": "natural",
+      "eyes": "brown, average size",
+      "nose": "average",
+      "lips": "medium",
+      "distinguishing_marks": "",
+      "notes": ""
+    }
+  },
+
+  "body_proportions": {
+    "head_ratio": 7.5,
+    "shoulder_width_ratio": 0.25,
+    "arm_length_ratio": 0.45,
+    "leg_length_ratio": 0.5,
+    "notes": "歪み防止: 頭身比率は必ず7-8頭身を維持"
+  },
+
+  "outfit": {
+    "default": {
+      "top": "brocade jacket with floral pattern, blue and gold",
+      "bottom": "dark trousers",
+      "accessories": "patterned silk scarf",
+      "footwear": "dark dress shoes"
+    },
+    "casual": {
+      "top": "solid color polo shirt",
+      "bottom": "chinos",
+      "accessories": "none",
+      "footwear": "casual loafers"
+    },
+    "formal": {
+      "top": "dark suit jacket, white shirt",
+      "bottom": "matching suit trousers",
+      "accessories": "necktie",
+      "footwear": "oxford shoes"
+    }
+  },
+
+  "expression_range": [
+    "neutral",
+    "slight_smile",
+    "thoughtful",
+    "explaining",
+    "enthusiastic"
+  ],
+
+  "poses": {
+    "standing": {
+      "default": "standing straight, arms at sides",
+      "presenting": "standing, one hand gesturing",
+      "pointing": "standing, pointing at screen/object"
+    },
+    "seated": {
+      "default": "seated, hands on lap",
+      "engaged": "seated, leaning slightly forward",
+      "relaxed": "seated, leaning back slightly"
+    }
+  },
+
+  "style": {
+    "rendering": "photorealistic",
+    "lighting": "soft studio lighting, three-point setup",
+    "camera": "portrait lens (85mm equivalent), no wide-angle distortion",
+    "color_grading": "natural, slightly warm",
+    "background_interaction": "soft shadow, natural integration"
+  },
+
+  "ng_constraints": [
+    "stretched limbs",
+    "wide-angle distortion",
+    "warped anatomy",
+    "inconsistent face",
+    "different outfit",
+    "blurry features",
+    "unnatural proportions",
+    "melted or distorted hands",
+    "incorrect finger count",
+    "floating or disconnected elements",
+    "dramatic lighting changes between sections"
+  ],
+
+  "consistency_checks": {
+    "face_match_threshold": 0.85,
+    "outfit_color_tolerance": 15,
+    "proportion_variance_max": 0.1,
+    "notes": "各セクションで上記閾値を超える差異があれば再生成"
+  },
+
+  "reference_images": {
+    "face_front": "",
+    "face_side": "",
+    "full_body": "",
+    "outfit_detail": "",
+    "notes": "参照画像は元動画からではなく、NanoBananaで生成した画像を使用"
+  },
+
+  "metadata": {
+    "created_at": "",
+    "updated_at": "",
+    "project_name": "",
+    "notes": ""
+  }
+}

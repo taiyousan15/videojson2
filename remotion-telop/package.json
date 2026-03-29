@@ -1,0 +1,37 @@
+{
+  "name": "remotion-telop",
+  "version": "1.0.0",
+  "description": "日本語テロップ生成 Remotion コンポーネント",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "remotion studio",
+    "build": "tsc",
+    "render": "remotion render TelopVideo out/telop-video.mp4",
+    "render:lecture": "remotion render LectureVideo out/lecture-video.mp4",
+    "preview": "remotion preview",
+    "upgrade": "remotion upgrade"
+  },
+  "keywords": [
+    "remotion",
+    "telop",
+    "japanese",
+    "caption",
+    "subtitle"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@remotion/captions": "^4.0.399",
+    "@remotion/cli": "^4.0.399",
+    "@remotion/fonts": "^4.0.399",
+    "@remotion/google-fonts": "^4.0.404",
+    "@remotion/layout-utils": "^4.0.399",
+    "@types/react": "^19.2.7",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "remotion": "^4.0.399",
+    "remotion-animated": "^2.2.0",
+    "typescript": "^5.9.3"
+  }
+}

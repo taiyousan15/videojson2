@@ -1,0 +1,135 @@
+name: taisun-guards
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'feat/intent-contract-*'
+      - 'feat/taisun-*'
+
+jobs:
+  lint:
+    name: TAISUN Definition Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Workflow Lint
+        run: npm run workflow:lint
+
+      - name: Skill Lint
+        run: npm run skill:lint
+
+  test:
+    name: TAISUN Guard Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create artifacts directory
+        run: mkdir -p .claude/artifacts
+
+      - name: Run TAISUN Guard Tests
+        run: npx vitest run tests/taisun-guards.test.js
+
+  integration:
+    name: TAISUN Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create artifacts directory
+        run: mkdir -p .claude/artifacts
+
+      - name: Test - Intent Contract Block (契約なしで危険操作が block)
+        run: |
+          # 契約ファイルがない状態で Bash を実行 → block されるべき
+          rm -f .claude/artifacts/intent_contract.yaml
+          echo '{"tool_name":"Bash","tool_input":{"command":"ls"}}' | node .claude/hooks/pre-tool-use-guard.cjs > /tmp/result.json 2>&1 || true
+          if grep -q '"decision":"block"' /tmp/result.json; then
+            echo "✅ Intent Contract Block: PASS"
+          else
+            echo "❌ Intent Contract Block: FAIL"
+            cat /tmp/result.json
+            exit 1
+          fi
+
+      - name: Test - Read/Search Allowed Without Contract
+        run: |
+          # 契約ファイルがなくても Read は許可
+          rm -f .claude/artifacts/intent_contract.yaml
+          echo '{"tool_name":"Read","tool_input":{"file_path":"/tmp/test.txt"}}' | node .claude/hooks/pre-tool-use-guard.cjs
+          echo "✅ Read Allowed: PASS"
+
+      - name: Test - Copy Safety Guard (U+FFFD)
+        run: |
+          # U+FFFD 検出テスト
+          mkdir -p .claude/artifacts
+          cat > .claude/artifacts/intent_contract.yaml << 'EOF'
+          objective: "Test"
+          inputs: []
+          constraints: []
+          definition_of_done: []
+          EOF
+
+          # U+FFFD を含むリクエスト → block されるべき
+          echo '{"tool_name":"Write","tool_input":{"file_path":"/tmp/test.txt","content":"テスト\ufffd文字化け"}}' | node .claude/hooks/pre-tool-use-guard.cjs > /tmp/result.json 2>&1 || true
+          if grep -q '"decision":"block"' /tmp/result.json; then
+            echo "✅ U+FFFD Block: PASS"
+          else
+            echo "❌ U+FFFD Block: FAIL"
+            exit 1
+          fi
+
+      - name: Test - Shared Validator
+        run: |
+          # shared-validator の基本テスト
+          node -e "
+            const v = require('./.claude/hooks/shared/shared-validator.cjs');
+            const r = v.validateSkillWorkflowDefinition({id:'test',version:1,steps:[{id:'s1',requiredEvidence:['validation:all_previous']}]});
+            if (!r.valid) { console.error('FAIL:', r.errors); process.exit(1); }
+            console.log('✅ Shared Validator: PASS');
+          "
+
+      - name: Test - Large Output Sink
+        run: |
+          node -e "
+            const s = require('./.claude/hooks/shared/large-output-sink.cjs');
+            const large = 'a'.repeat(6001);
+            if (!s.isLargeOutput(large)) { console.error('FAIL: should detect large'); process.exit(1); }
+            if (s.isLargeOutput('small')) { console.error('FAIL: small should not be large'); process.exit(1); }
+            console.log('✅ Large Output Sink: PASS');
+          "

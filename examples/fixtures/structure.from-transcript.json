@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-12-30T21:08:16.581Z",
+  "video": {
+    "source_type": "transcript",
+    "source": "transcript",
+    "title": "Sample Video for Testing",
+    "duration_ms": 120000,
+    "language": "ja"
+  },
+  "segments": [
+    {
+      "id": "s01",
+      "type": "intro",
+      "start_ms": 0,
+      "end_ms": 20000,
+      "summary": "こんにちはと今日の動画へようこそに関する内容を扱っています。"
+    },
+    {
+      "id": "s02",
+      "type": "talk",
+      "start_ms": 20000,
+      "end_ms": 45000,
+      "summary": "視聴者が何を知りたいのかとどんな順番で伝えるのかを整理しましょうに関する内容を扱っています。"
+    },
+    {
+      "id": "s03",
+      "type": "talk",
+      "start_ms": 45000,
+      "end_ms": 60000,
+      "summary": "編集ではと不要な部分をカットしに関する内容を扱っています。"
+    },
+    {
+      "id": "s04",
+      "type": "talk",
+      "start_ms": 60000,
+      "end_ms": 75000,
+      "summary": "や効果音を適切に使うことでと動画に深みが出ますに関する内容を扱っています。"
+    },
+    {
+      "id": "s05",
+      "type": "talk",
+      "start_ms": 75000,
+      "end_ms": 90000,
+      "summary": "字幕を入れることでとアクセシビリティも向上しますに関する内容を扱っています。"
+    },
+    {
+      "id": "s06",
+      "type": "talk",
+      "start_ms": 90000,
+      "end_ms": 105000,
+      "summary": "最後にとサムネイルとタイトルも重要ですに関する内容を扱っています。"
+    },
+    {
+      "id": "s07",
+      "type": "outro",
+      "start_ms": 105000,
+      "end_ms": 120000,
+      "summary": "それではと実際に動画を作ってみましょうに関する内容を扱っています。"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json.schemastore.org/mcp.json",
+  "_comment": "TAISUN MCP Market Underlay - Full Catalog (原則disabled、/mcp-add + 人間承認でのみ有効化)",
+
+  "mcpServers": {
+    "_comment_existing": "既存サーバー（互換維持）",
+
+    "dspy": {
+      "command": "/Users/matsumototoshihiko/Desktop/test1/videoJSON/.venv/bin/python",
+      "args": ["/Users/matsumototoshihiko/Desktop/test1/videoJSON/mcp-servers/dspy_server.py"],
+      "description": "DSPy MCP - Declarative LLM programming with prompt optimization",
+      "enabled": true
+    },
+    "ollama": {
+      "command": "npx",
+      "args": ["-y", "ollama-mcp"],
+      "env": {
+        "OLLAMA_HOST": "http://127.0.0.1:11434"
+      },
+      "description": "Ollama MCP - Local LLM inference (API cost reduction)",
+      "enabled": true
+    },
+    "comfyui": {
+      "command": "npx",
+      "args": ["-y", "comfyui-mcp"],
+      "env": {
+        "COMFYUI_URL": "http://127.0.0.1:8188"
+      },
+      "description": "ComfyUI MCP - Local image/video generation",
+      "enabled": true
+    },
+    "context-optimizer": {
+      "command": "context-optimizer-mcp",
+      "env": {
+        "CONTEXT_OPT_LLM_PROVIDER": "openai",
+        "CONTEXT_OPT_OPENAI_KEY": "${OPENROUTER_API_KEY}",
+        "CONTEXT_OPT_ALLOWED_PATHS": "/Users/matsumototoshihiko/Desktop/test1/videoJSON"
+      },
+      "description": "Context Optimizer - Extracts targeted information from files and commands to save context window",
+      "enabled": true
+    },
+    "ctx": {
+      "command": "/Users/matsumototoshihiko/.local/bin/ctx",
+      "args": ["server", "-c", "/Users/matsumototoshihiko/Desktop/test1/videoJSON"],
+      "description": "CTX Context Generator - Generates structured context from codebase for LLM consumption",
+      "enabled": true
+    },
+    "gcloud": {
+      "command": "npx",
+      "args": ["-y", "@google-cloud/gcloud-mcp"],
+      "description": "Google Cloud MCP - Run gcloud commands for GCP services including TTS",
+      "enabled": true
+    },
+
+    "_comment_curated": "TAISUN Curated Candidates (原則disabled)",
+
+    "memory-server": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/memory-server"],
+      "description": "証跡/要約/ノウハウの検索性向上（再発低減）",
+      "enabled": false,
+      "constraints": [
+        "writeは要約のみ（大出力禁止）",
+        "tagsに issueId/skillId/phaseId を必須"
+      ],
+      "role": "evidence_search"
+    },
+    "mcp-server-configuration-manager": {
+      "command": "npx",
+      "args": ["-y", "mcp-server-configuration-manager"],
+      "description": "MCP設定の追加/削除/検証の自動化（設定事故低減）",
+      "enabled": false,
+      "constraints": [
+        ".mcp.json は proxy-only 最小を維持",
+        "追加は disabled で入り、トリガー定義後に有効化"
+      ],
+      "role": "config_management"
+    },
+    "openspec": {
+      "command": "npx",
+      "args": ["-y", "openspec-mcp"],
+      "description": "仕様駆動（DoD/契約/変更追跡）の強化",
+      "enabled": false,
+      "constraints": [
+        "spec更新はPR差分に残す",
+        "spec変更は承認が必要"
+      ],
+      "role": "spec_driven"
+    }
+  },
+
+  "_taisun_policy": {
+    "selection_policy": [
+      "ガードはrepo内完結（MCPは補助）",
+      "curated allowlist のみ採用、原則 disabled",
+      "追加は /mcp-add + 人間承認 + 権限最小化",
+      "常駐ロード禁止（deferred loading）"
+    ],
+    "enable_command": "node .claude/hooks/mcp-add.cjs <server-id>",
+    "human_approval_required": true
+  }
+}

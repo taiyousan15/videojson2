@@ -1,0 +1,41 @@
+# Intent Contract Template
+# このファイルを artifacts/intent_contract.yaml にコピーして編集
+
+version: 1
+contract_id: ""  # 自動生成 or ユーザー指定
+
+# 目的: 何を達成するか
+objective: ""
+
+# 非目標: 明示的にやらないこと
+non_goals: []
+
+# 入力: 何を使うか
+inputs:
+  reference_assets: []  # 参照アセット（画像/動画/URL等）
+  source_files: []      # ソースファイル
+  parameters: {}        # パラメータ
+
+# 制約: 守るべきルール
+constraints:
+  forbidden_tools: []   # 禁止ツール
+  required_phases: []   # 必須フェーズ
+  time_limit: null      # 時間制限（オプション）
+  quality_requirements: []  # 品質要件
+
+# 完了定義: 何をもって完了とするか
+definition_of_done:
+  required_outputs: []  # 必須出力ファイル
+  validations: []       # 必須検証
+  acceptance_criteria: []  # 受け入れ基準
+
+# 逸脱ポリシー: どの逸脱が許可されるか
+allowed_deviations_policy:
+  requires_approval: true  # 逸脱には承認が必要
+  allowed_deviation_types: []  # 許可される逸脱タイプ
+
+# メタデータ
+metadata:
+  created_at: ""
+  created_by: ""
+  last_modified: ""

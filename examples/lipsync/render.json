@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2025-01-01T00:00:00.000Z",
+  "render_mode": "hybrid",
+  "output": {
+    "format": "mp4",
+    "width": 640,
+    "height": 360,
+    "fps": 30,
+    "audio_sample_rate": 44100,
+    "filename": "lipsync_output.mp4"
+  },
+  "assets": [
+    {
+      "id": "avatar_face",
+      "type": "image",
+      "uri": "assets/face.png",
+      "meta": {
+        "consent": true,
+        "consent_type": "self",
+        "consent_date": "2025-01-01",
+        "consent_scope": ["lipsync"]
+      }
+    },
+    {
+      "id": "narration_audio",
+      "type": "audio",
+      "uri": "assets/narration.mp3"
+    }
+  ],
+  "segments": [
+    {
+      "id": "s01",
+      "duration_ms": 3000,
+      "video": {
+        "mode": "lipsync",
+        "lipsync": {
+          "face_asset_id": "avatar_face",
+          "provider": "dummy",
+          "watermark": {
+            "enabled": true,
+            "text": "AI Generated"
+          }
+        }
+      },
+      "audio": {
+        "mode": "uploaded",
+        "asset_id": "narration_audio"
+      }
+    }
+  ]
+}

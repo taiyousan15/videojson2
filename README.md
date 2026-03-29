@@ -1,169 +1,145 @@
 # VideoJSON
 
-動画をJSON形式で構造化し、テンプレート化することで類似動画を量産するシステム。
+動画をJSON形式で構造化し、台本・音声・スタイルを差し替えて新しい動画を生成するCLIツール。
 
-## システム概要
+**元動画の「構成」を参考に、中身は完全オリジナルの動画を作る** ための仕組みです。
 
-```
-[元動画] → [解析] → [Event JSON] → [テンプレート化] → [差し替え] → [新動画生成]
-```
-
-## 技術スタック
-
-| 層 | 技術 |
-|---|------|
-| Frontend | Next.js 15, React 19, Tailwind CSS |
-| API | Next.js API Routes |
-| Worker | Express, Cloud Tasks |
-| DB | PostgreSQL, Prisma |
-| Storage | Google Cloud Storage |
-| AI | Anthropic, OpenAI, Gemini, ComfyUI, etc. |
-
-## クイックスタート
-
-### 前提条件
-
-- Node.js 20+
-- Docker & Docker Compose
-- pnpm または npm
-
-### 1. リポジトリのクローン
+## 3ステップで始める
 
 ```bash
-git clone <repository-url>
-cd videoJSON
+# 1. 環境チェック
+npm run doctor
+
+# 2. プロジェクト作成（4つの入力ルートから選択）
+npm run project:create -- --subtitles input.srt --out myproject
+
+# 3. 台本を編集して動画生成
+# myproject/narration.md を編集
+npm run project:run -- --project myproject
 ```
 
-### 2. 依存関係のインストール
+完成した動画は `myproject/outputs/output.mp4` に出力されます。
+
+## 前提条件
+
+- Node.js 20 以上
+- ffmpeg
 
 ```bash
 npm install
-cd worker && npm install && cd ..
+npm run doctor  # 環境チェック
 ```
 
-### 3. 環境変数の設定
+## 入力ルート
+
+| あなたの状況 | コマンド |
+|-------------|---------|
+| YouTube動画がある | `--youtube-url "https://..."` |
+| SRT/VTT字幕がある | `--subtitles input.srt` |
+| ローカル動画がある | `--video input.mp4`（Whisper必要） |
+| transcript.jsonがある | `--transcript data.json` |
 
 ```bash
-cp .env.example .env
-# .envファイルを編集して必要な値を設定
+# YouTube から（ネット必要）
+npm run project:create -- --youtube-url "https://youtube.com/watch?v=..." --out myproject
+
+# SRT/VTT 字幕から（ネット不要・初心者推奨）
+npm run project:create -- --subtitles input.srt --out myproject
+
+# ローカル動画から（Whisper必要）
+npm run project:create -- --video input.mp4 --out myproject --language ja
+
+# transcript.json から（CI向け）
+npm run project:create -- --transcript data.json --out myproject
 ```
 
-**最小限の設定:**
-- `DATABASE_URL` - PostgreSQL接続文字列
-- `NEXTAUTH_SECRET` - `openssl rand -base64 32` で生成
-- `ANTHROPIC_API_KEY` または `OPENAI_API_KEY` - 少なくとも1つ
+## プリセット
 
-### 4. データベースの起動
+縦型ショートやYouTube標準など、フォーマット別のプリセットが使えます。
 
 ```bash
-docker-compose up -d
+# 縦型ショート（TikTok/Reels/Shorts）
+npm run project:create -- --subtitles input.srt --out shorts/ep01 --preset vertical-short
+
+# YouTube 16:9
+npm run project:create -- --subtitles input.srt --out youtube/ep01 --preset youtube-16x9
 ```
 
-### 5. データベースのセットアップ
+## 量産
+
+1つのプロジェクトから複数フォーマットを一括生成：
 
 ```bash
-npm run db:generate
-npm run db:push
-npm run db:seed  # 初期データ投入（オプション）
+npm run project:variants -- --project myproject
+# → outputs/default/, outputs/vertical-short/, outputs/youtube-16x9/
 ```
 
-### 6. 開発サーバーの起動
+## よくある詰まり
 
-**Frontend (Terminal 1):**
-```bash
-npm run dev
-```
-
-**Worker (Terminal 2):**
-```bash
-cd worker
-npm run dev
-```
-
-### 7. アクセス
-
-- Frontend: http://localhost:3000
-- Worker API: http://localhost:8080
-- Prisma Studio: `npm run db:studio`
-
-## プロジェクト構造
-
-```
-videoJSON/
-├── app/                    # Next.js App Router
-│   ├── (auth)/            # 認証ページ
-│   ├── (dashboard)/       # ダッシュボード
-│   ├── admin/             # 管理画面
-│   └── api/               # API Routes
-├── components/            # React コンポーネント
-├── lib/                   # ユーティリティ
-├── shared/                # 共有型定義・スキーマ
-├── worker/                # バックグラウンドワーカー
-│   ├── src/
-│   │   ├── jobs/         # ジョブ実行ロジック
-│   │   ├── pipelines/    # 処理パイプライン
-│   │   ├── providers/    # AIプロバイダー連携
-│   │   └── tasks/        # タスク管理
-│   └── prisma/           # DB スキーマ
-├── prisma/                # Prisma設定
-├── tests/                 # テストスイート
-└── docs/                  # ドキュメント
-```
-
-## ジョブタイプ
-
-| タイプ | 説明 |
-|--------|------|
-| INGEST | 動画の取り込み・正規化 |
-| ANALYZE | AI解析（チャプター、イベント抽出） |
-| OCR | 画面内テキスト認識 |
-| EMBED | 顔認識・人物紐付け |
-| HIGHLIGHT | ハイライト自動抽出 |
-| RENDER | FFmpegレンダリング |
-| ASSEMBLE | 最終動画組み立て |
-| GENERATE | AI生成コンテンツ作成 |
-| COMFYUI | ComfyUIワークフロー実行 |
-
-## テスト
+### ffmpeg が見つからない
 
 ```bash
-# 単体テスト
-npm run test
+# macOS
+brew install ffmpeg
 
-# E2Eテスト
-npm run test:e2e
-
-# カバレッジレポート
-npm run test:coverage
+# Ubuntu
+sudo apt-get install ffmpeg
 ```
 
-## 開発コマンド
+### Whisper が見つからない
 
+Whisper なしでも使えます。SRT/VTT 字幕ルートを使ってください：
 ```bash
-npm run dev          # 開発サーバー起動
-npm run build        # 本番ビルド
-npm run lint         # Lint実行
-npm run typecheck    # 型チェック
-npm run db:studio    # Prisma Studio起動
-npm run db:migrate   # マイグレーション実行
+npm run project:create -- --subtitles input.srt --out myproject
 ```
 
-## 環境変数一覧
+Whisper をインストールする場合：
+```bash
+pip install openai-whisper
+```
 
-詳細は `.env.example` を参照。
+### YouTube 字幕が取得できない
 
-**必須:**
-- `DATABASE_URL` - PostgreSQL
-- `NEXTAUTH_SECRET` - 認証シークレット
+1. 動画に字幕が設定されていない可能性があります
+2. `yt-dlp` で字幕をダウンロードしてください：
+   ```bash
+   yt-dlp --write-auto-sub --sub-lang ja --skip-download "URL"
+   ```
+3. ダウンロードした .vtt/.srt を使用：
+   ```bash
+   npm run project:create -- --subtitles downloaded.ja.vtt --out myproject
+   ```
 
-**推奨:**
-- `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` - LLM
-- `GCS_BUCKET` - ファイルストレージ
+### 詳しいトラブルシューティング
 
-**オプション:**
-- `COMFYUI_URL` - ローカルComfyUI
-- `ELEVENLABS_API_KEY` - TTS
-- `RUNWAY_API_KEY` - 動画生成
+→ [docs/troubleshooting.md](./docs/troubleshooting.md)
+
+## 権利・許諾について
+
+**重要**: このツールは「構成を参考にする」ためのものであり、「コピーを作る」ためのものではありません。
+
+- 台本は必ずオリジナルに書き換えてください
+- 第三者の声・顔の模倣は、明確な許可がない限り禁止です
+- 本人の声・本人の素材を使う場合のみ許可されます
+- `validate:policy` コマンドで著作権・肖像権のチェックができます
+
+## コマンド一覧
+
+| コマンド | 説明 |
+|----------|------|
+| `npm run doctor` | 環境チェック |
+| `npm run project:create` | プロジェクト作成（推奨入口） |
+| `npm run project:run` | 動画生成 |
+| `npm run project:variants` | 複数プリセットで一括生成 |
+| `npm run validate:strict` | 厳格な検証 |
+| `npm run preview:html` | HTMLプレビュー生成 |
+
+## ドキュメント
+
+- [クイックスタート](./docs/quickstart.md) - 詳しい使い方
+- [トラブルシューティング](./docs/troubleshooting.md) - 問題解決
+- [設定ガイド](./docs/config.md) - 環境変数とプロバイダー
+- [レンダリング](./docs/rendering.md) - 詳細なレンダリングオプション
 
 ## ライセンス
 

@@ -73,6 +73,19 @@ __pycache__/
 
 # Work directories (generated content)
 videojson_workdir/
+.tmp/
+
+# Generated render outputs (do not commit binaries)
+examples/*/assets/*.mp4
+examples/*/assets/*.mp3
+examples/*/assets/*.wav
+examples/*/assets/*.png
+examples/*/*.materialized.json
+examples/*/output.mp4
+examples/*/out.mp4
+examples/*/*.mp4
+!examples/*/render.json
+.render_temp/
 
 # Large model files
 *.onnx
@@ -84,3 +97,5 @@ tests/e2e/screenshots/
 
 # MCP servers local
 mcp-servers/
+work/
+projects/*/input.mp4

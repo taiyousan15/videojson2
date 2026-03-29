@@ -2,6 +2,10 @@
   "name": "videojson",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "bin": {
+    "videojson": "./scripts/cli/videojson.mjs"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -17,7 +21,41 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "schema:validate": "node scripts/validate-examples.mjs",
+    "narration:validate": "node scripts/validate-narration.mjs",
+    "narration:skeleton": "node scripts/generate-narration-skeleton.mjs",
+    "narration:generate": "node scripts/generate-narration.mjs",
+    "validate": "npm run schema:validate && node scripts/validate-narration.mjs --structure examples/minimal/structure.json --narration examples/minimal/narration.md",
+    "validate:semantic": "node scripts/validate-semantic.mjs",
+    "validate:policy": "node scripts/validate-policy.mjs",
+    "render:generate": "node scripts/generate-render.mjs",
+    "render:bootstrap": "node scripts/bootstrap-smoke-assets.mjs",
+    "render:materialize": "node scripts/materialize-render.mjs",
+    "render:ffmpeg": "node scripts/render-ffmpeg.mjs",
+    "render:smoke": "npm run render:bootstrap && npm run render:materialize -- --render examples/smoke/render.json && npm run render:ffmpeg -- --render examples/smoke/render.materialized.json",
+    "render:run": "node scripts/render-run.mjs",
+    "analyze:transcript": "node scripts/analyze-transcript.mjs",
+    "analyze:youtube": "node scripts/analyze-youtube.mjs",
+    "analyze:video": "node scripts/analyze-video.mjs",
+    "analyze:reference": "node scripts/analyze-reference-asset.mjs",
+    "transcript:convert": "node scripts/convert-subtitles-to-transcript.mjs",
+    "project:init": "node scripts/project-init.mjs",
+    "preview:html": "node scripts/preview-html.mjs",
+    "validate:strict": "node scripts/validate-strict.mjs",
+    "project:run": "node scripts/project-run.mjs",
+    "project:create": "node scripts/project-create.mjs",
+    "project:variants": "node scripts/project-variants.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "workflow:lint": "node .claude/hooks/workflow-lint.cjs",
+    "skill:lint": "node .claude/hooks/workflow-lint.cjs --skill",
+    "mcp:list": "node .claude/hooks/mcp-add.cjs --list",
+    "mcp:add": "node .claude/hooks/mcp-add.cjs",
+    "test:guards": "vitest run tests/taisun-guards.test.ts",
+    "guard:verify": "npm run workflow:lint && npm run skill:lint && npm run test:guards",
+    "test:lipsync": "node tests/lipsync-e2e.mjs",
+    "jp-slide:create": "npx ts-node worker/src/cli/jp-slide-training.ts",
+    "jp-slide:help": "npx ts-node worker/src/cli/jp-slide-training.ts --help"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -41,6 +79,8 @@
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^5.1.2",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.17.0",
     "eslint-config-next": "15.1.3",
@@ -50,7 +90,8 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "youtube-transcript": "^1.2.1"
   },
   "engines": {
     "node": ">=20"
